@@ -1,0 +1,1425 @@
+<!DOCTYPE html>
+<html lang="th" class="h-full bg-slate-100">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบแผนที่และวิเคราะห์ยอดขายวัสดุก่อสร้าง จ.เชียงใหม่ (Sales Territory & AI Analytics)</title>
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#eff6ff',
+                            100: '#dbeafe',
+                            500: '#3b82f6',
+                            600: '#2563eb',
+                            700: '#1d4ed8',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Font: Kanit -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Leaflet CSS & JS for Interactive Map -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <!-- Chart.js for Market Analytics -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        body {
+            font-family: 'Kanit', sans-serif;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+        #map {
+            width: 100%;
+            height: 100%;
+            z-index: 10;
+        }
+        /* Custom Light Popup Styling */
+        .leaflet-popup-content-wrapper {
+            background-color: #ffffff !important;
+            color: #0f172a !important;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.75rem;
+            padding: 4px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+        .leaflet-popup-tip {
+            background-color: #ffffff !important;
+        }
+        /* District Label Badge on Map */
+        .district-label-badge {
+            background-color: rgba(255, 255, 255, 0.88);
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            padding: 2px 8px;
+            font-size: 11px;
+            font-weight: 700;
+            color: #1e293b;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+            white-space: nowrap;
+        }
+    </style>
+</head>
+<body class="h-full text-slate-800 flex flex-col overflow-hidden bg-slate-100">
+
+    <!-- Header Navigation -->
+    <header class="bg-white border-b border-slate-200 px-4 py-3 flex flex-wrap items-center justify-between gap-3 shadow-sm z-20">
+        <div class="flex items-center space-x-3">
+            <div class="p-2.5 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-xl shadow-md text-white">
+                <i class="fa-solid fa-map-location-dot text-xl"></i>
+            </div>
+            <div>
+                <h1 class="font-bold text-lg leading-tight text-slate-800 flex items-center gap-2">
+                    CM Sales Territory & Market AI
+                    <span class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">จ.เชียงใหม่</span>
+                </h1>
+                <p class="text-xs text-slate-500">ระบบแผนที่แบ่งโซนร้านค้าวัสดุก่อสร้าง และ AI วิเคราะห์ส่วนแบ่งตลาด</p>
+            </div>
+        </div>
+
+        <!-- Action Controls & Filters -->
+        <div class="flex items-center flex-wrap gap-2">
+            <!-- Search Input -->
+            <div class="relative">
+                <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-400 text-xs"></i>
+                <input type="text" id="searchInput" oninput="filterShops()" placeholder="ค้นหาร้านค้า, อำเภอ..." 
+                    class="bg-slate-50 text-xs text-slate-800 pl-8 pr-3 py-1.5 rounded-lg border border-slate-300 focus:outline-none focus:border-blue-500 focus:bg-white w-44 sm:w-56 transition">
+            </div>
+
+            <!-- District Filter -->
+            <select id="districtFilter" onchange="filterShops()" class="bg-slate-50 text-xs text-slate-800 px-3 py-1.5 rounded-lg border border-slate-300 focus:outline-none focus:border-blue-500 focus:bg-white transition">
+                <option value="ALL">ทุกอำเภอในเชียงใหม่</option>
+                <option value="เมืองเชียงใหม่">อ.เมืองเชียงใหม่</option>
+                <option value="หางดง">อ.หางดง</option>
+                <option value="สันทราย">อ.สันทราย</option>
+                <option value="แม่ริม">อ.แม่ริม</option>
+                <option value="สันกำแพง">อ.สันกำแพง</option>
+                <option value="สารภี">อ.สารภี</option>
+            </select>
+
+            <!-- Status Filter -->
+            <select id="statusFilter" onchange="filterShops()" class="bg-slate-50 text-xs text-slate-800 px-3 py-1.5 rounded-lg border border-slate-300 focus:outline-none focus:border-blue-500 focus:bg-white transition">
+                <option value="ALL">สถานะร้านค้าทั้งหมด</option>
+                <option value="CUSTOMER">🟢 ลูกค้าปัจจุบัน</option>
+                <option value="PROSPECT">🔴 ร้านเป้าหมาย (Prospect)</option>
+            </select>
+
+            <!-- Add New Store Button -->
+            <button onclick="openAddModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 shadow-sm transition">
+                <i class="fa-solid fa-plus"></i>
+                <span>เพิ่มร้านค้า</span>
+            </button>
+
+            <!-- Sync Data Button -->
+            <button onclick="loadData()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition">
+                <i class="fa-solid fa-rotate text-xs"></i>
+                <span class="hidden sm:inline">รีเฟรช</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- KPI Summary Bar (Light Theme) -->
+    <section class="bg-slate-50 border-b border-slate-200 px-4 py-2 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 text-sm">
+        <div class="bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
+            <div>
+                <span class="text-slate-500 text-xs block">ร้านค้าทั้งหมด</span>
+                <span id="kpiTotal" class="text-lg font-bold text-slate-800">0</span>
+            </div>
+            <div class="p-2 bg-slate-100 rounded-lg text-slate-600">
+                <i class="fa-solid fa-store text-lg"></i>
+            </div>
+        </div>
+        <div class="bg-white p-2.5 rounded-xl border border-emerald-200 shadow-sm flex items-center justify-between">
+            <div>
+                <span class="text-slate-500 text-xs block">ลูกค้าปัจจุบัน</span>
+                <span id="kpiCustomer" class="text-lg font-bold text-emerald-600">0</span>
+            </div>
+            <div class="p-2 bg-emerald-50 rounded-lg text-emerald-600">
+                <i class="fa-solid fa-circle-check text-lg"></i>
+            </div>
+        </div>
+        <div class="bg-white p-2.5 rounded-xl border border-rose-200 shadow-sm flex items-center justify-between">
+            <div>
+                <span class="text-slate-500 text-xs block">ร้านเป้าหมาย (Prospect)</span>
+                <span id="kpiProspect" class="text-lg font-bold text-rose-600">0</span>
+            </div>
+            <div class="p-2 bg-rose-50 rounded-lg text-rose-600">
+                <i class="fa-solid fa-bullseye text-lg"></i>
+            </div>
+        </div>
+        <div class="bg-white p-2.5 rounded-xl border border-amber-200 shadow-sm flex items-center justify-between">
+            <div>
+                <span class="text-slate-500 text-xs block">อัตราปิดการขายร้านค้า</span>
+                <span id="kpiShare" class="text-lg font-bold text-amber-600">0%</span>
+            </div>
+            <div class="p-2 bg-amber-50 rounded-lg text-amber-600">
+                <i class="fa-solid fa-chart-pie text-lg"></i>
+            </div>
+        </div>
+        <div class="bg-white p-2.5 rounded-xl border border-purple-200 shadow-sm flex items-center justify-between">
+            <div>
+                <span class="text-slate-500 text-xs block">ตลาดรวม จ.เชียงใหม่</span>
+                <span id="kpiCmTotalMkt" class="text-lg font-bold text-purple-700">฿12.5 พันลบ.</span>
+            </div>
+            <div class="p-2 bg-purple-50 rounded-lg text-purple-600">
+                <i class="fa-solid fa-city text-lg"></i>
+            </div>
+        </div>
+        <div class="bg-white p-2.5 rounded-xl border border-blue-200 shadow-sm flex items-center justify-between">
+            <div>
+                <span class="text-slate-500 text-xs block">ยอดขายสะสมเดือนนี้</span>
+                <span id="kpiRevenue" class="text-lg font-bold text-blue-600">฿0</span>
+            </div>
+            <div class="p-2 bg-blue-50 rounded-lg text-blue-600">
+                <i class="fa-solid fa-baht-sign text-lg"></i>
+            </div>
+        </div>
+    </section>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 flex flex-col md:flex-row overflow-hidden relative">
+
+        <!-- Left Column: Light Map Container -->
+        <section class="flex-1 h-2/5 md:h-full relative">
+            <div id="map"></div>
+            
+            <!-- Map Legend Box overlay (Toggleable Light Theme) -->
+            <div id="mapLegendBox" class="absolute bottom-4 left-4 bg-white/95 backdrop-blur border border-slate-200 text-xs p-3.5 rounded-xl shadow-xl z-[400] max-w-xs transition-all duration-300">
+                <!-- Legend Header with Toggle Button -->
+                <div class="font-bold text-slate-800 flex items-center justify-between cursor-pointer select-none" onclick="toggleMapLegend()">
+                    <span class="flex items-center"><i class="fa-solid fa-layer-group text-blue-600 mr-1.5"></i>สัญลักษณ์แผนที่ & โซนขาย</span>
+                    <button id="toggleLegendBtn" type="button" class="text-slate-400 hover:text-slate-600 ml-3 p-0.5 text-xs transition-transform duration-200" title="ซ่อน/แสดง สัญลักษณ์">
+                        <i id="legendChevron" class="fa-solid fa-chevron-down"></i>
+                    </button>
+                </div>
+                
+                <!-- Legend Body Content -->
+                <div id="legendBody" class="space-y-2 pt-2 border-t border-slate-200 mt-2">
+                    <!-- Status Pins -->
+                    <div class="space-y-1">
+                        <div class="flex items-center gap-2">
+                            <span class="w-3 h-3 rounded-full bg-emerald-500 inline-block shadow-sm"></span>
+                            <span class="text-slate-700 font-medium">ลูกค้าปัจจุบัน (Customer)</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="w-3 h-3 rounded-full bg-rose-500 inline-block shadow-sm"></span>
+                            <span class="text-slate-700 font-medium">ร้านเป้าหมาย (Prospect)</span>
+                        </div>
+                    </div>
+
+                    <!-- District Zone Colors -->
+                    <div class="border-t border-slate-100 pt-1.5 space-y-1">
+                        <div class="text-[11px] font-semibold text-slate-500">เส้นขอบเขตโซนอำเภอ (District Boundaries):</div>
+                        <div class="grid grid-cols-2 gap-x-2 gap-y-1 text-[10px]">
+                            <div class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded border border-blue-600 bg-blue-100"></span><span>อ.เมือง</span></div>
+                            <div class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded border border-emerald-600 bg-emerald-100"></span><span>อ.หางดง</span></div>
+                            <div class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded border border-amber-600 bg-amber-100"></span><span>อ.สันทราย</span></div>
+                            <div class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded border border-purple-600 bg-purple-100"></span><span>อ.แม่ริม</span></div>
+                            <div class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded border border-pink-600 bg-pink-100"></span><span>อ.สันกำแพง</span></div>
+                            <div class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded border border-cyan-600 bg-cyan-100"></span><span>อ.สารภี</span></div>
+                        </div>
+                    </div>
+
+                    <div class="text-[10px] text-slate-400 pt-1 border-t border-slate-100">
+                        * คลิกที่หมุดร้านค้า เพื่อดูสถิติแยกสินค้าและเรียกใช้งาน AI
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Right Column: Sidebar (Shop Details / Analytics / AI Strategy) -->
+        <section class="w-full md:w-[480px] lg:w-[520px] bg-white border-t md:border-t-0 md:border-l border-slate-200 flex flex-col h-3/5 md:h-full z-10 shadow-lg">
+            
+            <!-- Tab Navigation Header -->
+            <div class="flex border-b border-slate-200 bg-slate-50">
+                <button id="tabBtnList" onclick="switchTab('list')" class="flex-1 py-3 px-2 text-xs font-semibold border-b-2 border-blue-600 text-blue-600 flex items-center justify-center gap-1.5 transition">
+                    <i class="fa-solid fa-list-ul"></i>
+                    <span>รายชื่อร้านค้า</span>
+                </button>
+                <button id="tabBtnDetail" onclick="switchTab('detail')" class="flex-1 py-3 px-2 text-xs font-semibold border-b-2 border-transparent text-slate-500 hover:text-slate-800 flex items-center justify-center gap-1.5 transition">
+                    <i class="fa-solid fa-store"></i>
+                    <span>รายละเอียดร้าน</span>
+                </button>
+                <button id="tabBtnChart" onclick="switchTab('chart')" class="flex-1 py-3 px-2 text-xs font-semibold border-b-2 border-transparent text-slate-500 hover:text-slate-800 flex items-center justify-center gap-1.5 transition">
+                    <i class="fa-solid fa-chart-line"></i>
+                    <span>วิเคราะห์ตลาดเชียงใหม่</span>
+                </button>
+                <button id="tabBtnAi" onclick="switchTab('ai')" class="flex-1 py-3 px-2 text-xs font-semibold border-b-2 border-transparent text-slate-500 hover:text-slate-800 flex items-center justify-center gap-1.5 transition">
+                    <i class="fa-solid fa-robot text-purple-600"></i>
+                    <span>กลยุทธ์ AI</span>
+                </button>
+            </div>
+
+            <!-- Tab Content: Shop List -->
+            <div id="tabList" class="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-2 bg-slate-50/50">
+                <div class="flex justify-between items-center text-xs text-slate-500 px-1 py-1">
+                    <span>รายการร้านค้าในพื้นที่ (<span id="shopCountText">0</span>)</span>
+                    <span class="text-[11px] text-slate-400">เรียงตามยอดขายสูงสุด</span>
+                </div>
+                <div id="shopListContainer" class="space-y-2">
+                    <!-- Dynamic shop cards inserted here -->
+                </div>
+            </div>
+
+            <!-- Tab Content: Shop Detail View -->
+            <div id="tabDetail" class="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-4 hidden bg-slate-50/50">
+                <div id="noShopSelected" class="text-center py-16 text-slate-400">
+                    <i class="fa-solid fa-location-dot text-4xl mb-3 block text-slate-300"></i>
+                    <p class="text-sm font-medium text-slate-600">กรุณาเลือกหรือคลิกหมุดร้านค้าบนแผนที่</p>
+                    <p class="text-xs text-slate-400 mt-1">เพื่อดูรายละเอียดยอดขายแยกตามหมวดสินค้าและใช้งาน AI</p>
+                </div>
+
+                <div id="shopDetailContent" class="hidden space-y-4">
+                    <!-- Header Shop Card -->
+                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm relative overflow-hidden">
+                        <div id="detailStatusBadge" class="absolute top-3 right-3 text-[10px] font-bold px-2.5 py-0.5 rounded-full">
+                            CUSTOMER
+                        </div>
+                        <h2 id="detailShopName" class="text-base font-bold text-slate-800 pr-20">ชื่อร้านค้า...</h2>
+                        <p id="detailAddress" class="text-xs text-slate-500 mt-1 flex items-center gap-1">
+                            <i class="fa-solid fa-location-dot text-slate-400"></i> ที่อยู่...
+                        </p>
+                        
+                        <div class="grid grid-cols-2 gap-3 mt-4 pt-3 border-t border-slate-100">
+                            <div>
+                                <span class="text-[11px] text-slate-500 block">ยอดขายรวมสะสม</span>
+                                <span id="detailTotalSales" class="text-lg font-bold text-blue-600">฿0</span>
+                            </div>
+                            <div>
+                                <span class="text-[11px] text-slate-500 block">เบอร์โทรศัพท์</span>
+                                <span id="detailPhone" class="text-sm font-semibold text-slate-700">-</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Category Sales Breakdown Chart -->
+                    <div class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm">
+                        <h3 class="text-xs font-bold text-slate-700 mb-2 flex items-center justify-between">
+                            <span><i class="fa-solid fa-pie-chart text-blue-500 mr-1.5"></i>สัดส่วนสินค้าขายดี (Product Breakdown)</span>
+                        </h3>
+                        <div class="w-full h-48">
+                            <canvas id="shopCategoryChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- AI Store Sales Advisor Button & Output -->
+                    <div class="bg-gradient-to-br from-indigo-50 to-blue-50 p-4 rounded-xl border border-indigo-200 shadow-sm">
+                        <div class="flex items-center justify-between mb-2">
+                            <div class="flex items-center space-x-2">
+                                <i class="fa-solid fa-wand-magic-sparkles text-indigo-600"></i>
+                                <h3 class="text-xs font-bold text-indigo-900">AI ช่วยวิเคราะห์โอกาสการขายร้านนี้</h3>
+                            </div>
+                            <button onclick="runAiShopAnalysis()" id="btnAiAnalyzeShop" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-3 py-1 rounded-lg font-medium transition flex items-center gap-1 shadow-sm">
+                                <i class="fa-solid fa-robot"></i>
+                                <span>เริ่มวิเคราะห์</span>
+                            </button>
+                        </div>
+                        <p class="text-[11px] text-indigo-700 mb-3">ระบบ AI จะประเมินศักยภาพร้านค้ากับบริบทตลาดวัสดุก่อสร้างเชียงใหม่ พร้อมแนะนำกลยุทธ์ Cross-Selling</p>
+
+                        <div id="aiShopResult" class="bg-white p-3 rounded-lg border border-indigo-200 text-xs text-slate-700 leading-relaxed min-h-[80px] hidden whitespace-pre-line shadow-inner">
+                            <!-- AI Generated Content Output -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab Content: Chiang Mai Market Share & Analytics -->
+            <div id="tabChart" class="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-4 hidden bg-slate-50/50">
+                <!-- Chiang Mai Overall Market Overview Card -->
+                <div class="bg-gradient-to-br from-purple-50 to-indigo-50 p-4 rounded-xl border border-purple-200 shadow-sm">
+                    <div class="flex items-center justify-between border-b border-purple-200/60 pb-2 mb-3">
+                        <div class="flex items-center space-x-2">
+                            <i class="fa-solid fa-map-location-dot text-purple-600 text-sm"></i>
+                            <h3 class="text-xs font-bold text-purple-900">ภาพรวมตลาดวัสดุก่อสร้าง จ.เชียงใหม่</h3>
+                        </div>
+                        <span class="text-[10px] bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full border border-purple-300 font-semibold">ประมาณการปี 2026</span>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-2 text-xs mb-3">
+                        <div class="bg-white p-2.5 rounded-lg border border-purple-100 shadow-sm">
+                            <span class="text-slate-500 text-[11px] block">มูลค่าตลาดรวมเชียงใหม่</span>
+                            <span class="font-bold text-purple-800 text-sm">12,500 ล้านบาท/ปี</span>
+                        </div>
+                        <div class="bg-white p-2.5 rounded-lg border border-purple-100 shadow-sm">
+                            <span class="text-slate-500 text-[11px] block">ส่วนแบ่งตลาดที่เราครอง</span>
+                            <span id="cmPenetrationRate" class="font-bold text-amber-600 text-sm">0.03%</span>
+                        </div>
+                    </div>
+
+                    <!-- Progress bar vs CM Potential Target -->
+                    <div>
+                        <div class="flex justify-between text-[11px] text-slate-700 mb-1">
+                            <span>เป้าหมายครองตลาดเชียงใหม่ (Target 2% รายเดือน)</span>
+                            <span id="cmTargetPercent" class="font-semibold text-amber-600">0%</span>
+                        </div>
+                        <div class="w-full bg-slate-200 rounded-full h-2 overflow-hidden border border-slate-300">
+                            <div id="cmTargetProgressBar" class="bg-gradient-to-r from-amber-500 to-emerald-500 h-2 rounded-full transition-all duration-500" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Market Share Donut Chart -->
+                <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
+                    <h3 class="text-xs font-bold text-slate-700 mb-2 text-center">สัดส่วนร้านค้าในเขตการขาย (Customer Ratio)</h3>
+                    <div class="w-full h-44 flex justify-center items-center">
+                        <canvas id="marketShareChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Product Category Overall Breakdown Bar Chart -->
+                <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
+                    <h3 class="text-xs font-bold text-slate-700 mb-2 text-center">สัดส่วนยอดขายตามหมวดสินค้าวัสดุก่อสร้าง</h3>
+                    <div class="w-full h-52">
+                        <canvas id="overallCategoryChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab Content: AI Provincial Strategy Generator -->
+            <div id="tabAi" class="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-4 hidden bg-slate-50/50">
+                <div class="bg-gradient-to-br from-purple-100/70 to-indigo-100/70 p-4 rounded-xl border border-purple-200 shadow-sm">
+                    <div class="flex items-center gap-2 mb-2">
+                        <i class="fa-solid fa-brain text-purple-700 text-lg"></i>
+                        <h3 class="text-sm font-bold text-purple-900">AI วางแผนกลยุทธ์การขายระดับจังหวัด</h3>
+                    </div>
+                    <p class="text-xs text-slate-600 leading-relaxed mb-3">
+                        ประมวลผลข้อมูลร้านค้าทั้งหมดในระบบเทียบกับศักยภาพตลาดเชียงใหม่ เพื่อสร้างคำแนะนำเชิงกลยุทธ์สำหรับทีมขายวัสดุก่อสร้าง
+                    </p>
+                    <button onclick="generateProvincialStrategy()" id="btnGenerateStrategy" class="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white text-xs font-bold py-2.5 px-4 rounded-lg shadow transition flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i>
+                        <span>ประมวลผลกลยุทธ์การขายภาพรวม</span>
+                    </button>
+                </div>
+
+                <div id="provincialAiOutput" class="bg-white p-4 rounded-xl border border-slate-200 text-xs text-slate-700 leading-relaxed min-h-[160px] whitespace-pre-line hidden shadow-sm">
+                    <!-- Generated AI response goes here -->
+                </div>
+            </div>
+
+        </section>
+    </main>
+
+    <!-- Modal: Add New Shop (Light Theme) -->
+    <div id="addShopModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[999] flex items-center justify-center p-4 hidden">
+        <div class="bg-white border border-slate-200 rounded-2xl w-full max-w-md p-5 shadow-2xl space-y-4">
+            <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+                <h3 class="font-bold text-sm text-slate-800 flex items-center gap-2">
+                    <i class="fa-solid fa-store text-blue-600"></i>
+                    <span>เพิ่มข้อมูลร้านค้าวัสดุก่อสร้างใหม่</span>
+                </h3>
+                <button onclick="closeAddModal()" class="text-slate-400 hover:text-slate-600 text-xl font-bold">&times;</button>
+            </div>
+
+            <form id="addShopForm" onsubmit="saveNewShop(event)" class="space-y-3 text-xs">
+                <div>
+                    <label class="block text-slate-600 mb-1 font-medium">ชื่อร้านค้า *</label>
+                    <input type="text" id="addName" required placeholder="เช่น สินเจริญการช่าง" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 text-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none">
+                </div>
+
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block text-slate-600 mb-1 font-medium">สถานะร้านค้า</label>
+                        <select id="addStatus" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 text-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none">
+                            <option value="CUSTOMER">🟢 ลูกค้าปัจจุบัน</option>
+                            <option value="PROSPECT">🔴 ร้านเป้าหมาย (Prospect)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-slate-600 mb-1 font-medium">อำเภอ (จ.เชียงใหม่)</label>
+                        <select id="addDistrict" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 text-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none">
+                            <option value="เมืองเชียงใหม่">อ.เมืองเชียงใหม่</option>
+                            <option value="หางดง">อ.หางดง</option>
+                            <option value="สันทราย">อ.สันทราย</option>
+                            <option value="แม่ริม">อ.แม่ริม</option>
+                            <option value="สันกำแพง">อ.สันกำแพง</option>
+                            <option value="สารภี">อ.สารภี</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block text-slate-600 mb-1 font-medium">พิกัด ละติจูด (Latitude)</label>
+                        <input type="number" step="any" id="addLat" required placeholder="18.788" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 text-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-slate-600 mb-1 font-medium">พิกัด ลองจิจูด (Longitude)</label>
+                        <input type="number" step="any" id="addLng" required placeholder="98.985" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 text-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-slate-600 mb-1 font-medium">ยอดขายประมาณการ (บาท)</label>
+                    <input type="number" id="addSales" placeholder="150000" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 text-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none">
+                </div>
+
+                <div>
+                    <label class="block text-slate-600 mb-1 font-medium">เบอร์โทรศัพท์ติดต่อ</label>
+                    <input type="text" id="addPhone" placeholder="053-XXX-XXX" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 text-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none">
+                </div>
+
+                <div class="pt-2 flex gap-2">
+                    <button type="button" onclick="closeAddModal()" class="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-700 py-2 rounded-lg font-medium transition">ยกเลิก</button>
+                    <button type="submit" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg font-medium transition shadow-sm">บันทึกข้อมูล</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Global App State Variables
+        let map;
+        let markersGroup;
+        let districtZonesGroup;
+        let shopData = [];
+        let activeShop = null;
+        let marketShareChartInstance = null;
+        let overallCategoryChartInstance = null;
+        let shopCategoryChartInstance = null;
+
+        // Chiang Mai Initial Center Coordinates
+        const CM_CENTER = [18.7883, 98.9853];
+
+        // District Color Map for Chiang Mai Sales Zones
+        const districtColors = {
+            "เมืองเชียงใหม่": "#2563eb",
+            "หางดง": "#059669",
+            "สันทราย": "#d97706",
+            "แม่ริม": "#7c3aed",
+            "สันกำแพง": "#db2777",
+            "สารภี": "#0891b2",
+            "แม่แตง": "#e11d48",
+            "จอมทอง": "#16a34a",
+            "ดอยสะเก็ด": "#ca8a04",
+            "ฝาง": "#0284c7"
+        };
+
+        // Embedded Real GIS Simplified GeoJSON Fallback for Key Chiang Mai Districts
+        const fallbackCMGeoJSON = {
+            "type": "FeatureCollection",
+            "features": [
+                {
+                    "type": "Feature",
+                    "properties": { "amp_th": "เมืองเชียงใหม่", "pro_th": "เชียงใหม่" },
+                    "geometry": {
+                        "type": "Polygon",
+                        "coordinates": [[[98.948,18.845],[98.982,18.835],[99.015,18.812],[99.028,18.785],[99.018,18.745],[98.985,18.740],[98.955,18.760],[98.922,18.795],[98.948,18.845]]]
+                    }
+                },
+                {
+                    "type": "Feature",
+                    "properties": { "amp_th": "หางดง", "pro_th": "เชียงใหม่" },
+                    "geometry": {
+                        "type": "Polygon",
+                        "coordinates": [[[98.922,18.795],[98.985,18.740],[98.972,18.685],[98.942,18.630],[98.885,18.642],[98.865,18.712],[98.922,18.795]]]
+                    }
+                },
+                {
+                    "type": "Feature",
+                    "properties": { "amp_th": "สันทราย", "pro_th": "เชียงใหม่" },
+                    "geometry": {
+                        "type": "Polygon",
+                        "coordinates": [[[98.982,18.835],[99.018,18.942],[99.085,18.915],[99.092,18.832],[99.015,18.812],[98.982,18.835]]]
+                    }
+                },
+                {
+                    "type": "Feature",
+                    "properties": { "amp_th": "แม่ริม", "pro_th": "เชียงใหม่" },
+                    "geometry": {
+                        "type": "Polygon",
+                        "coordinates": [[[98.845,18.962],[98.942,18.965],[98.982,18.835],[98.948,18.845],[98.852,18.855],[98.845,18.962]]]
+                    }
+                },
+                {
+                    "type": "Feature",
+                    "properties": { "amp_th": "สันกำแพง", "pro_th": "เชียงใหม่" },
+                    "geometry": {
+                        "type": "Polygon",
+                        "coordinates": [[[99.015,18.812],[99.092,18.832],[99.155,18.775],[99.125,18.692],[99.018,18.745],[99.015,18.812]]]
+                    }
+                },
+                {
+                    "type": "Feature",
+                    "properties": { "amp_th": "สารภี", "pro_th": "เชียงใหม่" },
+                    "geometry": {
+                        "type": "Polygon",
+                        "coordinates": [[[99.018,18.745],[99.068,18.735],[99.062,18.665],[98.972,18.685],[99.018,18.745]]]
+                    }
+                }
+            ]
+        };
+
+        // Sample Mock Data for Chiang Mai Construction Material Shops
+        const initialMockShops = [
+            {
+                id: 1,
+                name: "บริษัท วีระพานิช เชียงใหม่ จำกัด",
+                status: "CUSTOMER",
+                district: "เมืองเชียงใหม่",
+                lat: 18.7981,
+                lng: 99.0145,
+                phone: "053-852-345",
+                address: "44/1-8 ถ.ซุปเปอร์ไฮเวย์ ต.วัดเกต อ.เมืองเชียงใหม่",
+                totalSales: 1850000,
+                products: {
+                    "ปูนซีเมนต์/คอนกรีต": 740000,
+                    "เหล็กรูปพรรณ": 555000,
+                    "กระเบื้องหลังคา": 277500,
+                    "อุปกรณ์ประปา/ไฟฟ้า": 185000,
+                    "สีและเคมีภัณฑ์": 92500
+                }
+            },
+            {
+                id: 2,
+                name: "บริษัท เลิศวสิน (2002) จำกัด",
+                status: "CUSTOMER",
+                district: "เมืองเชียงใหม่",
+                lat: 18.7885,
+                lng: 99.0210,
+                phone: "053-126-155",
+                address: "141/3 ม.7 ต.หนองป่าครั่ง อ.เมืองเชียงใหม่",
+                totalSales: 1240000,
+                products: {
+                    "ปูนซีเมนต์/คอนกรีต": 496000,
+                    "เหล็กรูปพรรณ": 372000,
+                    "กระเบื้องหลังคา": 186000,
+                    "เครื่องมือช่าง/ฮาร์ดแวร์": 186000
+                }
+            },
+            {
+                id: 3,
+                name: "ร้านกมลโลหะกิจเชียงใหม่ (Prospect)",
+                status: "PROSPECT",
+                district: "เมืองเชียงใหม่",
+                lat: 18.7989,
+                lng: 98.9875,
+                phone: "081-671-1338",
+                address: "169/4-5 ถ.ช้างเผือก ต.ศรีภูมิ อ.เมืองเชียงใหม่",
+                totalSales: 0,
+                products: {}
+            },
+            {
+                id: 4,
+                name: "ใหม่เจริญพรวัสดุก่อสร้าง",
+                status: "CUSTOMER",
+                district: "เมืองเชียงใหม่",
+                lat: 18.7830,
+                lng: 99.0190,
+                phone: "053-241-890",
+                address: "ต.หนองป่าครั่ง อ.เมืองเชียงใหม่",
+                totalSales: 680000,
+                products: {
+                    "ปูนซีเมนต์/คอนกรีต": 272000,
+                    "เหล็กรูปพรรณ": 204000,
+                    "อุปกรณ์ประปา/ไฟฟ้า": 136000,
+                    "สีและเคมีภัณฑ์": 68000
+                }
+            },
+            {
+                id: 5,
+                name: "ต.โฮม ศูนย์รวมวัสดุก่อสร้าง",
+                status: "CUSTOMER",
+                district: "หางดง",
+                lat: 18.7025,
+                lng: 98.9320,
+                phone: "053-430-055",
+                address: "123 ม.11 ถ.เชียงใหม่-หางดง ต.หนองควาย อ.หางดง",
+                totalSales: 1450000,
+                products: {
+                    "ปูนซีเมนต์/คอนกรีต": 580000,
+                    "เหล็กรูปพรรณ": 435000,
+                    "กระเบื้องหลังคา": 217500,
+                    "เครื่องมือช่าง/ฮาร์ดแวร์": 217500
+                }
+            },
+            {
+                id: 6,
+                name: "ร้านสมบูรณ์ วัสดุก่อสร้าง",
+                status: "CUSTOMER",
+                district: "หางดง",
+                lat: 18.7210,
+                lng: 98.9480,
+                phone: "081-992-4128",
+                address: "เรียบคลองชลประทาน ต.สันผักหวาน อ.หางดง",
+                totalSales: 520000,
+                products: {
+                    "ปูนซีเมนต์/คอนกรีต": 208000,
+                    "เหล็กรูปพรรณ": 156000,
+                    "กระเบื้องหลังคา": 78000,
+                    "อุปกรณ์ประปา/ไฟฟ้า": 78000
+                }
+            },
+            {
+                id: 7,
+                name: "บจก.ภัทรวดีน้ำแพร่วัสดุ (Prospect)",
+                status: "PROSPECT",
+                district: "หางดง",
+                lat: 18.6750,
+                lng: 98.8980,
+                phone: "089-956-9055",
+                address: "194 ม.4 ต.น้ำแพร่ อ.หางดง",
+                totalSales: 0,
+                products: {}
+            },
+            {
+                id: 8,
+                name: "บริษัท ซี.พี.เอส.โฮมเซ็นเตอร์ จำกัด",
+                status: "CUSTOMER",
+                district: "สันกำแพง",
+                lat: 18.7712,
+                lng: 99.0580,
+                phone: "053-115-811",
+                address: "95 ม.6 ถ.รอบเมืองเชียงใหม่ ต.สันกลาง อ.สันกำแพง",
+                totalSales: 1120000,
+                products: {
+                    "ปูนซีเมนต์/คอนกรีต": 448000,
+                    "เหล็กรูปพรรณ": 336000,
+                    "กระเบื้องหลังคา": 168000,
+                    "สีและเคมีภัณฑ์": 168000
+                }
+            },
+            {
+                id: 9,
+                name: "สันกำแพงคลังวัสดุ (Prospect)",
+                status: "PROSPECT",
+                district: "สันกำแพง",
+                lat: 18.7451,
+                lng: 99.1230,
+                phone: "053-331-554",
+                address: "ต.สันกำแพง อ.สันกำแพง จ.เชียงใหม่",
+                totalSales: 0,
+                products: {}
+            },
+            {
+                id: 10,
+                name: "สันทรายโฮมเซ็นเตอร์ (Prospect)",
+                status: "PROSPECT",
+                district: "สันทราย",
+                lat: 18.8488,
+                lng: 99.0435,
+                phone: "053-865-900",
+                address: "สี่แยกสันทราย อ.สันทราย จ.เชียงใหม่",
+                totalSales: 0,
+                products: {}
+            },
+            {
+                id: 11,
+                name: "แม่โจ้เคหะภัณฑ์ & คอนกรีต",
+                status: "CUSTOMER",
+                district: "สันทราย",
+                lat: 18.8910,
+                lng: 99.0120,
+                phone: "053-353-112",
+                address: "ต.หนองหาร อ.สันทราย จ.เชียงใหม่",
+                totalSales: 790000,
+                products: {
+                    "ปูนซีเมนต์/คอนกรีต": 316000,
+                    "เหล็กรูปพรรณ": 237000,
+                    "กระเบื้องหลังคา": 118500,
+                    "อุปกรณ์ประปา/ไฟฟ้า": 118500
+                }
+            },
+            {
+                id: 12,
+                name: "แม่ริมซีเมนต์และฮาร์ดแวร์",
+                status: "CUSTOMER",
+                district: "แม่ริม",
+                lat: 18.9142,
+                lng: 98.9458,
+                phone: "053-297-112",
+                address: "ถ.โชตนา ต.ริมใต้ อ.แม่ริม จ.เชียงใหม่",
+                totalSales: 860000,
+                products: {
+                    "ปูนซีเมนต์/คอนกรีต": 344000,
+                    "เหล็กรูปพรรณ": 258000,
+                    "อุปกรณ์ประปา/ไฟฟ้า": 129000,
+                    "เครื่องมือช่าง/ฮาร์ดแวร์": 129000
+                }
+            },
+            {
+                id: 13,
+                name: "สารภีคอนกรีตและเหล็กเส้น",
+                status: "CUSTOMER",
+                district: "สารภี",
+                lat: 18.7120,
+                lng: 99.0345,
+                phone: "053-321-009",
+                address: "ต.ยางเนิ้ง อ.สารภี จ.เชียงใหม่",
+                totalSales: 710000,
+                products: {
+                    "ปูนซีเมนต์/คอนกรีต": 284000,
+                    "เหล็กรูปพรรณ": 213000,
+                    "สีและเคมีภัณฑ์": 142000,
+                    "กระเบื้องหลังคา": 71000
+                }
+            },
+            {
+                id: 14,
+                name: "ยางเนิ้งเคมีภัณฑ์ & ฮาร์ดแวร์ (Prospect)",
+                status: "PROSPECT",
+                district: "สารภี",
+                lat: 18.6980,
+                lng: 99.0410,
+                phone: "053-322-887",
+                address: "ต.ยางเนิ้ง อ.สารภี จ.เชียงใหม่",
+                totalSales: 0,
+                products: {}
+            }
+        ];
+
+        window.onload = function() {
+            initMap();
+            loadData();
+        };
+
+        // Initialize Leaflet Map with Bright Voyager Theme & District Zones
+        function initMap() {
+            map = L.map('map', {
+                zoomControl: true
+            }).setView(CM_CENTER, 11);
+
+            // Bright-themed Map Tiles (CartoDB Voyager Light)
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+                attribution: '&copy; OpenStreetMap &copy; CARTO',
+                subdomains: 'abcd',
+                maxZoom: 19
+            }).addTo(map);
+
+            districtZonesGroup = L.layerGroup().addTo(map);
+            markersGroup = L.featureGroup().addTo(map);
+
+            // Draw Real District Zone Polygons on Map
+            renderDistrictZones();
+        }
+
+        // Render Real Geographic District Boundaries (Official GIS GeoJSON Data)
+        async function renderDistrictZones() {
+            districtZonesGroup.clearLayers();
+
+            let geoData = null;
+
+            // Fetch official Thailand district boundaries from OpenGIS Data repository
+            try {
+                const response = await fetch('https://raw.githubusercontent.com/chingchai/OpenGISData-Thailand/master/districts.geojson');
+                if (response.ok) {
+                    const fullData = await response.json();
+                    // Filter features strictly for Chiang Mai Province (pro_th = 'เชียงใหม่' or pro_code = '50')
+                    const cmFeatures = fullData.features.filter(f => 
+                        f.properties && (f.properties.pro_th === 'เชียงใหม่' || f.properties.pro_code === '50')
+                    );
+                    if (cmFeatures.length > 0) {
+                        geoData = { type: "FeatureCollection", features: cmFeatures };
+                    }
+                }
+            } catch (e) {
+                console.warn("Using GIS fallback boundaries for Chiang Mai districts:", e);
+            }
+
+            if (!geoData) {
+                geoData = fallbackCMGeoJSON;
+            }
+
+            // Render GeoJSON with authentic boundaries and styling
+            const geoJsonLayer = L.geoJSON(geoData, {
+                style: function(feature) {
+                    const ampName = feature.properties ? (feature.properties.amp_th || feature.properties.AMP_TH) : '';
+                    const color = districtColors[ampName] || '#64748b';
+                    return {
+                        color: color,
+                        weight: 2,
+                        dashArray: '3, 3',
+                        fillColor: color,
+                        fillOpacity: 0.18,
+                        interactive: true
+                    };
+                },
+                onEachFeature: function(feature, layer) {
+                    const ampName = feature.properties ? (feature.properties.amp_th || feature.properties.AMP_TH) : 'เขตอำเภอ';
+                    const color = districtColors[ampName] || '#334155';
+
+                    // Hover effects
+                    layer.on({
+                        mouseover: function(e) {
+                            const l = e.target;
+                            l.setStyle({ fillOpacity: 0.35, weight: 3, dashArray: '' });
+                            if (!L.Browser.ie && !L.Browser.opera && !L.Browser.edge) {
+                                l.bringToBack();
+                            }
+                        },
+                        mouseout: function(e) {
+                            geoJsonLayer.resetStyle(e.target);
+                        }
+                    });
+
+                    // District Tooltip (แสดงเมื่อนำเมาส์ไปชี้)
+                    layer.bindTooltip(`<b>อ.${ampName}</b> (โซนเขตการขาย)`, {
+                        sticky: true,
+                        className: 'district-tooltip'
+                    });
+                }
+            });
+
+            districtZonesGroup.addLayer(geoJsonLayer);
+        }
+
+        // Load Shop Data
+        function loadData() {
+            if (typeof google !== 'undefined' && google.script && google.script.run) {
+                google.script.run
+                    .withSuccessHandler(function(data) {
+                        shopData = data && data.length ? data : initialMockShops;
+                        renderApp();
+                    })
+                    .withFailureHandler(function(err) {
+                        console.error('Error fetching from GAS:', err);
+                        shopData = initialMockShops;
+                        renderApp();
+                    })
+                    .getShopDataFromSheet();
+            } else {
+                const saved = localStorage.getItem('cm_material_shops');
+                if (saved) {
+                    try { shopData = JSON.parse(saved); } catch(e) { shopData = initialMockShops; }
+                } else {
+                    shopData = initialMockShops;
+                }
+                renderApp();
+            }
+        }
+
+        function persistData() {
+            localStorage.setItem('cm_material_shops', JSON.stringify(shopData));
+        }
+
+        function renderApp() {
+            renderMarkers();
+            renderShopList();
+            updateKPIs();
+            renderOverallCharts();
+        }
+
+        function renderMarkers() {
+            markersGroup.clearLayers();
+            const filtered = getFilteredShops();
+
+            filtered.forEach(shop => {
+                const isCustomer = shop.status === 'CUSTOMER';
+                const color = isCustomer ? '#10b981' : '#f43f5e'; // Emerald for Customer, Rose for Prospect
+
+                // Custom SVG Pin Icon
+                const customIcon = L.divIcon({
+                    className: 'custom-pin',
+                    html: `
+                        <div style="
+                            background-color: ${color};
+                            width: 26px;
+                            height: 26px;
+                            border-radius: 50%;
+                            border: 2px solid #ffffff;
+                            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            color: white;
+                            font-size: 11px;
+                        ">
+                            <i class="fa-solid ${isCustomer ? 'fa-check' : 'fa-bullseye'}"></i>
+                        </div>
+                    `,
+                    iconSize: [26, 26],
+                    iconAnchor: [13, 13]
+                });
+
+                const marker = L.marker([shop.lat, shop.lng], { icon: customIcon });
+
+                // Popup content (Light theme)
+                const popupHtml = `
+                    <div class="text-xs space-y-1 p-1">
+                        <div class="font-bold text-slate-800 text-sm">${shop.name}</div>
+                        <div class="text-slate-500 flex items-center justify-between">
+                            <span>อ.${shop.district}</span>
+                            ${isCustomer ? '<span class="text-emerald-600 font-bold bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">ลูกค้าปัจจุบัน</span>' : '<span class="text-rose-600 font-bold bg-rose-50 px-1.5 py-0.5 rounded border border-rose-200">Prospect</span>'}
+                        </div>
+                        <div class="text-blue-600 font-bold text-xs pt-1">ยอดขาย: ฿${(shop.totalSales || 0).toLocaleString()}</div>
+                        <button onclick="selectShop(${shop.id})" class="w-full mt-2 bg-blue-600 hover:bg-blue-700 text-white font-medium text-[11px] py-1.5 rounded-lg transition shadow-sm">
+                            ดูรายละเอียดยอดขาย & AI
+                        </button>
+                    </div>
+                `;
+
+                marker.bindPopup(popupHtml);
+                markersGroup.addLayer(marker);
+            });
+
+            if (filtered.length > 0) {
+                map.fitBounds(markersGroup.getBounds().pad(0.2));
+            }
+        }
+
+        function getFilteredShops() {
+            const search = document.getElementById('searchInput').value.toLowerCase().trim();
+            const district = document.getElementById('districtFilter').value;
+            const status = document.getElementById('statusFilter').value;
+
+            return shopData.filter(shop => {
+                const matchSearch = shop.name.toLowerCase().includes(search) || 
+                                    (shop.district && shop.district.toLowerCase().includes(search)) ||
+                                    (shop.address && shop.address.toLowerCase().includes(search));
+                const matchDistrict = district === 'ALL' || shop.district === district;
+                const matchStatus = status === 'ALL' || shop.status === status;
+                return matchSearch && matchDistrict && matchStatus;
+            });
+        }
+
+        function filterShops() {
+            renderApp();
+        }
+
+        function renderShopList() {
+            const container = document.getElementById('shopListContainer');
+            const filtered = getFilteredShops().sort((a,b) => (b.totalSales || 0) - (a.totalSales || 0));
+            document.getElementById('shopCountText').innerText = filtered.length;
+
+            if (filtered.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-10 text-slate-400 text-xs">
+                        ไม่พบข้อมูลร้านค้าตามเงื่อนไขที่ค้นหา
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = filtered.map(shop => {
+                const isCustomer = shop.status === 'CUSTOMER';
+                return `
+                    <div onclick="selectShop(${shop.id})" class="bg-white hover:border-blue-300 p-3 rounded-xl border border-slate-200 cursor-pointer transition flex items-center justify-between group shadow-sm">
+                        <div class="space-y-1">
+                            <div class="flex items-center gap-2">
+                                <span class="w-2.5 h-2.5 rounded-full ${isCustomer ? 'bg-emerald-500' : 'bg-rose-500'}"></span>
+                                <h4 class="text-xs font-bold text-slate-800 group-hover:text-blue-600 transition">${shop.name}</h4>
+                            </div>
+                            <div class="text-[11px] text-slate-500 flex items-center gap-2">
+                                <span><i class="fa-solid fa-map-pin text-slate-400 mr-1"></i>อ.${shop.district}</span>
+                                <span>•</span>
+                                <span>${shop.phone || '-'}</span>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-xs font-bold text-blue-600 block">฿${(shop.totalSales || 0).toLocaleString()}</span>
+                            <span class="text-[10px] ${isCustomer ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-rose-50 text-rose-700 border-rose-200'} px-2 py-0.5 rounded-full border font-medium">
+                                ${isCustomer ? 'ลูกค้า' : 'Prospect'}
+                            </span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function selectShop(id) {
+            activeShop = shopData.find(s => s.id === id);
+            if (!activeShop) return;
+
+            switchTab('detail');
+
+            document.getElementById('noShopSelected').classList.add('hidden');
+            document.getElementById('shopDetailContent').classList.remove('hidden');
+
+            document.getElementById('detailShopName').innerText = activeShop.name;
+            document.getElementById('detailAddress').innerText = activeShop.address || `อ.${activeShop.district} จ.เชียงใหม่`;
+            document.getElementById('detailPhone').innerText = activeShop.phone || '-';
+            document.getElementById('detailTotalSales').innerText = `฿${(activeShop.totalSales || 0).toLocaleString()}`;
+
+            const badge = document.getElementById('detailStatusBadge');
+            if (activeShop.status === 'CUSTOMER') {
+                badge.innerText = '🟢 ลูกค้าปัจจุบัน';
+                badge.className = 'absolute top-3 right-3 text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200';
+            } else {
+                badge.innerText = '🔴 ร้านเป้าหมาย';
+                badge.className = 'absolute top-3 right-3 text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200';
+            }
+
+            if (map && activeShop.lat && activeShop.lng) {
+                map.setView([activeShop.lat, activeShop.lng], 14, { animate: true });
+            }
+
+            renderShopCategoryChart(activeShop);
+            
+            const aiBox = document.getElementById('aiShopResult');
+            aiBox.classList.add('hidden');
+            aiBox.innerText = '';
+        }
+
+        function updateKPIs() {
+            const filtered = getFilteredShops();
+            const total = filtered.length;
+            const customers = filtered.filter(s => s.status === 'CUSTOMER').length;
+            const prospects = filtered.filter(s => s.status === 'PROSPECT').length;
+            const share = total > 0 ? Math.round((customers / total) * 100) : 0;
+            const totalRev = filtered.reduce((acc, s) => acc + (s.totalSales || 0), 0);
+
+            const CHIANGMAI_ANNUAL_MARKET_VAL = 12500000000;
+            const CHIANGMAI_MONTHLY_MARKET_VAL = CHIANGMAI_ANNUAL_MARKET_VAL / 12;
+
+            const penetration = ((totalRev / CHIANGMAI_MONTHLY_MARKET_VAL) * 100).toFixed(2);
+            const targetMonthlyGoal = CHIANGMAI_MONTHLY_MARKET_VAL * 0.02;
+            const progressToGoal = Math.min(Math.round((totalRev / targetMonthlyGoal) * 100), 100);
+
+            document.getElementById('kpiTotal').innerText = total;
+            document.getElementById('kpiCustomer').innerText = customers;
+            document.getElementById('kpiProspect').innerText = prospects;
+            document.getElementById('kpiShare').innerText = `${share}%`;
+            document.getElementById('kpiRevenue').innerText = `฿${totalRev.toLocaleString()}`;
+
+            const cmPenetrationEl = document.getElementById('cmPenetrationRate');
+            const cmTargetPercentEl = document.getElementById('cmTargetPercent');
+            const cmProgressBarEl = document.getElementById('cmTargetProgressBar');
+
+            if (cmPenetrationEl) cmPenetrationEl.innerText = `${penetration}%`;
+            if (cmTargetPercentEl) cmTargetPercentEl.innerText = `${progressToGoal}% ของเป้า 2%`;
+            if (cmProgressBarEl) cmProgressBarEl.style.width = `${progressToGoal}%`;
+        }
+
+        function renderOverallCharts() {
+            const filtered = getFilteredShops();
+            const customers = filtered.filter(s => s.status === 'CUSTOMER').length;
+            const prospects = filtered.filter(s => s.status === 'PROSPECT').length;
+
+            // 1. Market Share Donut Chart
+            const ctxShare = document.getElementById('marketShareChart').getContext('2d');
+            if (marketShareChartInstance) marketShareChartInstance.destroy();
+
+            marketShareChartInstance = new Chart(ctxShare, {
+                type: 'doughnut',
+                data: {
+                    labels: ['ลูกค้าปัจจุบัน', 'ร้านเป้าหมาย (Prospect)'],
+                    datasets: [{
+                        data: [customers, prospects],
+                        backgroundColor: ['#10b981', '#f43f5e'],
+                        borderWidth: 2,
+                        borderColor: '#ffffff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { color: '#334155', font: { family: 'Kanit', size: 11 } }
+                        }
+                    }
+                }
+            });
+
+            // 2. Aggregate Product Category Bar Chart
+            const categoryTotals = {
+                "ปูนซีเมนต์/คอนกรีต": 0,
+                "เหล็กรูปพรรณ": 0,
+                "กระเบื้องหลังคา": 0,
+                "อุปกรณ์ประปา/ไฟฟ้า": 0,
+                "สีและเคมีภัณฑ์": 0,
+                "เครื่องมือช่าง/ฮาร์ดแวร์": 0
+            };
+
+            filtered.forEach(shop => {
+                if (shop.products) {
+                    for (const [cat, val] of Object.entries(shop.products)) {
+                        if (categoryTotals[cat] !== undefined) {
+                            categoryTotals[cat] += (val || 0);
+                        } else {
+                            categoryTotals[cat] = (val || 0);
+                        }
+                    }
+                }
+            });
+
+            const ctxOverall = document.getElementById('overallCategoryChart').getContext('2d');
+            if (overallCategoryChartInstance) overallCategoryChartInstance.destroy();
+
+            overallCategoryChartInstance = new Chart(ctxOverall, {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(categoryTotals),
+                    datasets: [{
+                        label: 'ยอดขายรวม (บาท)',
+                        data: Object.values(categoryTotals),
+                        backgroundColor: '#2563eb',
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        x: { ticks: { color: '#64748b', font: { family: 'Kanit', size: 9 } } },
+                        y: { ticks: { color: '#64748b', font: { family: 'Kanit', size: 10 } } }
+                    }
+                }
+            });
+        }
+
+        // Single Shop Breakdown Chart
+        function renderShopCategoryChart(shop) {
+            const ctx = document.getElementById('shopCategoryChart').getContext('2d');
+            if (shopCategoryChartInstance) shopCategoryChartInstance.destroy();
+
+            const products = shop.products || {};
+            const labels = Object.keys(products);
+            const values = Object.values(products);
+
+            if (labels.length === 0 || values.every(v => v === 0)) {
+                shopCategoryChartInstance = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['ยังไม่มีประวัติซื้อขาย'],
+                        datasets: [{ data: [1], backgroundColor: ['#e2e8f0'] }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false }
+                });
+                return;
+            }
+
+            shopCategoryChartInstance = new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: values,
+                        backgroundColor: ['#2563eb', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4'],
+                        borderWidth: 2,
+                        borderColor: '#ffffff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'right', labels: { color: '#334155', font: { family: 'Kanit', size: 10 } } }
+                    }
+                }
+            });
+        }
+
+        // Call Gemini 3 Flash API for Single Shop Sales Advisor
+        async function runAiShopAnalysis() {
+            if (!activeShop) return;
+
+            const btn = document.getElementById('btnAiAnalyzeShop');
+            const resultBox = document.getElementById('aiShopResult');
+
+            btn.disabled = true;
+            btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> กำลังวิเคราะห์...`;
+            resultBox.classList.remove('hidden');
+            resultBox.innerHTML = `🤖 กำลังประมวลผลข้อมูลร้าน ${activeShop.name} ด้วย Gemini AI...`;
+
+            const systemPrompt = "คุณคือผู้เชี่ยวชาญด้านกลยุทธ์การขายวัสดุก่อสร้างประจำจังหวัดเชียงใหม่ ตอบเป็นข้อๆ ให้สั้น กระชับ นำไปใช้ปฏิบัติจริงได้ทันที";
+            const userQuery = `ช่วยวิเคราะห์ร้านขายวัสดุก่อสร้างนี้:
+- ชื่อร้าน: ${activeShop.name}
+- สถานะ: ${activeShop.status === 'CUSTOMER' ? 'เป็นลูกค้าปัจจุบันแล้ว' : 'ยังไม่เป็นลูกค้า (Prospect)'}
+- ยอดขายรวม: ฿${(activeShop.totalSales || 0).toLocaleString()}
+- สัดส่วนสินค้าที่ซื้อขาย: ${JSON.stringify(activeShop.products || {})}
+- ที่อยู่พื้นที่: ${activeShop.address || activeShop.district} (บริบท: ตลาดรวมวัสดุก่อสร้าง จ.เชียงใหม่ มีมูลค่าประมาณ 12,500 ล้านบาท/ปี)
+
+โปรดระบุ:
+1. วิเคราะห์จุดแข็ง/โอกาสการขายของร้านนี้เทียบกับศักยภาพตลาดจังหวัดเชียงใหม่
+2. สินค้าหมวดไหนที่ควรนำเสนอเพิ่ม (Cross-selling / Upselling) หรือวิธีเปิดใจกรณีเป็น Prospect
+3. 2-3 ข้อแนะนำการเข้าพบสำหรับเซลส์`;
+
+            try {
+                const apiKey = ""; // Canvas handles runtime Gemini API key when left blank
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: userQuery }] }],
+                        systemInstruction: { parts: [{ text: systemPrompt }] }
+                    })
+                });
+
+                const data = await response.json();
+                const aiText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+
+                if (aiText) {
+                    resultBox.innerText = aiText;
+                } else {
+                    resultBox.innerText = "ไม่สามารถดึงข้อมูล AI ได้ในขณะนี้ โปรดลองอีกครั้ง";
+                }
+            } catch (err) {
+                console.error("AI Error:", err);
+                resultBox.innerText = `💡 [คำแนะนำสำรอง] สำหรับร้าน ${activeShop.name}:
+1. เป็นร้านที่มีศักยภาพสูงในอำเภอ ${activeShop.district}
+2. แนะนำเสนอเพิ่มหมวดเคมีภัณฑ์ก่อสร้าง และเหล็กรูปพรรณ เพื่อเพิ่มยอดต่อบิล
+3. ควรนัดพบผู้จัดการร้านในวันอังคาร-พฤหัสบดี ช่วงเช้า`;
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = `<i class="fa-solid fa-robot"></i> <span>เริ่มวิเคราะห์</span>`;
+            }
+        }
+
+        // Call Gemini 3 Flash API for Provincial Market Strategy
+        async function generateProvincialStrategy() {
+            const btn = document.getElementById('btnGenerateStrategy');
+            const output = document.getElementById('provincialAiOutput');
+
+            btn.disabled = true;
+            btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> กำลังประมวลผลกลยุทธ์...`;
+            output.classList.remove('hidden');
+            output.innerText = "🤖 Gemini AI กำลังวิเคราะห์ข้อมูลร้านค้าทั้งหมดและจัดทำแผนกลยุทธ์เจาะตลาดวัสดุก่อสร้าง จ.เชียงใหม่...";
+
+            const totalRev = shopData.reduce((acc, s) => acc + (s.totalSales || 0), 0);
+            const customerCount = shopData.filter(s => s.status === 'CUSTOMER').length;
+            const prospectCount = shopData.filter(s => s.status === 'PROSPECT').length;
+
+            const prompt = `วางแผนกลยุทธ์การขายวัสดุก่อสร้างในจังหวัดเชียงใหม่ (มูลค่าตลาดรวม 12,500 ล้านบาท/ปี):
+- จำนวนร้านค้าที่เป็นลูกค้าปัจจุบัน: ${customerCount} ร้าน
+- จำนวนร้านค้าที่เป็น Prospect: ${prospectCount} ร้าน
+- ยอดขายรวมปัจจุบันในระบบ: ฿${totalRev.toLocaleString()} บาท
+
+โปรดเสนอแนะ:
+1. อำเภอใดในเชียงใหม่ที่มีโอกาสขยายตลาดสูงสุด
+2. กลยุทธ์การเปลี่ยนร้าน Prospect เป็น Customer ให้เร็วที่สุด
+3. หมวดสินค้าหลักที่จะเป็น Key Driver ในการชิงส่วนแบ่งตลาด`;
+
+            try {
+                const apiKey = "";
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: prompt }] }],
+                        systemInstruction: { parts: [{ text: "คุณคือผู้อำนวยการฝ่ายขายวัสดุก่อสร้างประจำภาคเหนือ จัดทำแผนงานสั้น กระชับ ชัดเจน" }] }
+                    })
+                });
+
+                const data = await response.json();
+                const aiText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+
+                if (aiText) {
+                    output.innerText = aiText;
+                } else {
+                    output.innerText = "ไม่สามารถสร้างกลยุทธ์ได้ในขณะนี้";
+                }
+            } catch (err) {
+                output.innerText = `📊 [แผนกลยุทธ์เชียงใหม่]:
+1. โฟกัส อ.เมืองเชียงใหม่ และ อ.สันทราย เนื่องจากมีการขยายตัวของโครงการบ้านจัดสรร
+2. เสนอโปรโมชั่นเปิดบัญชีใหม่สำหรับร้าน Prospect ด้วยเครดิตเทอม 30 วัน
+3. ชูสินค้ากลุ่มปูนซีเมนต์โครงสร้างและเหล็กรูปพรรณเป็นตัวนำตลาด`;
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles"></i> <span>ประมวลผลกลยุทธ์การขายภาพรวม</span>`;
+            }
+        }
+
+        function switchTab(tabName) {
+            const tabs = ['list', 'detail', 'chart', 'ai'];
+            tabs.forEach(t => {
+                const btn = document.getElementById(`tabBtn${capitalize(t)}`);
+                const content = document.getElementById(`tab${capitalize(t)}`);
+                
+                if (t === tabName) {
+                    btn.className = "flex-1 py-3 px-2 text-xs font-semibold border-b-2 border-blue-600 text-blue-600 flex items-center justify-center gap-1.5 transition";
+                    content.classList.remove('hidden');
+                } else {
+                    btn.className = "flex-1 py-3 px-2 text-xs font-semibold border-b-2 border-transparent text-slate-500 hover:text-slate-800 flex items-center justify-center gap-1.5 transition";
+                    content.classList.add('hidden');
+                }
+            });
+        }
+
+        function capitalize(s) {
+            return s.charAt(0).toUpperCase() + s.slice(1);
+        }
+
+        // Add Shop Modal Handlers
+        function openAddModal() {
+            document.getElementById('addShopModal').classList.remove('hidden');
+        }
+
+        function closeAddModal() {
+            document.getElementById('addShopModal').classList.add('hidden');
+        }
+
+        // Toggle Map Legend Box Visibility
+        function toggleMapLegend() {
+            const legendBody = document.getElementById('legendBody');
+            const legendChevron = document.getElementById('legendChevron');
+            if (!legendBody || !legendChevron) return;
+
+            const isHidden = legendBody.classList.contains('hidden');
+            if (isHidden) {
+                legendBody.classList.remove('hidden');
+                legendChevron.className = 'fa-solid fa-chevron-down';
+            } else {
+                legendBody.classList.add('hidden');
+                legendChevron.className = 'fa-solid fa-chevron-up';
+            }
+        }
+
+        function saveNewShop(event) {
+            event.preventDefault();
+            const name = document.getElementById('addName').value.trim();
+            const status = document.getElementById('addStatus').value;
+            const district = document.getElementById('addDistrict').value;
+            const lat = parseFloat(document.getElementById('addLat').value);
+            const lng = parseFloat(document.getElementById('addLng').value);
+            const sales = parseFloat(document.getElementById('addSales').value) || 0;
+            const phone = document.getElementById('addPhone').value.trim();
+
+            const newShop = {
+                id: Date.now(),
+                name: name,
+                status: status,
+                district: district,
+                lat: lat,
+                lng: lng,
+                phone: phone,
+                address: `อ.${district} จ.เชียงใหม่`,
+                totalSales: sales,
+                products: sales > 0 ? { "ปูนซีเมนต์/คอนกรีต": sales * 0.6, "เหล็กรูปพรรณ": sales * 0.4 } : {}
+            };
+
+            shopData.push(newShop);
+            persistData();
+            closeAddModal();
+            renderApp();
+
+            selectShop(newShop.id);
+        }
+    </script>
+</body>
+</html>
