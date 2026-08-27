@@ -374,7 +374,7 @@
             // TODO: นำ Web App URL ที่ได้จาก Google Apps Script มาใส่ตรงนี้
             const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbz9DkplRFjqkcalJl6_7GKiEwxwvAmwShiuLNreUpUgXW6RhGGPJM_t9sFlCP_2g60s/exec';
 
-            if (GAS_API_URL === 'https://script.google.com/macros/s/AKfycbz9DkplRFjqkcalJl6_7GKiEwxwvAmwShiuLNreUpUgXW6RhGGPJM_t9sFlCP_2g60s/exec') {
+            if (GAS_API_URL === 'YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL') {
                 console.warn("ยังไม่ได้ใส่ Web App URL");
                 alertMsg("แจ้งเตือน: กรุณาใส่ Web App URL จาก GAS ในโค้ด HTML เพื่อเชื่อมต่อข้อมูล");
                 if(listContainer) listContainer.innerHTML = '<div class="text-center py-8 text-rose-500 text-xs"><b>Missing API URL:</b><br>กรุณานำ Web App URL จาก GAS มาตั้งค่าในโค้ด (ตัวแปร GAS_API_URL)</div>';
