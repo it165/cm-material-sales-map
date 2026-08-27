@@ -98,6 +98,10 @@
                 <input type="text" id="searchInput" oninput="filterMap()" placeholder="ค้นหาชื่อ..." class="bg-slate-50 text-xs text-slate-800 pl-8 pr-3 py-1.5 rounded-lg border border-slate-300 focus:outline-none focus:border-brand-500 w-32 sm:w-48 transition">
             </div>
 
+            <button onclick="loadDataFromGAS()" class="bg-brand-100 hover:bg-brand-200 text-brand-700 px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition" title="ดึงข้อมูลล่าสุดจากฐานข้อมูล">
+                <i class="fa-solid fa-rotate-right"></i> <span class="hidden sm:inline">รีโหลด</span>
+            </button>
+
             <button id="btnAddData" onclick="toastMsg('ฟังก์ชันแก้ไขจะเปิดให้ใช้งานในเวอร์ชันถัดไป')" class="bg-brand-600 hover:bg-brand-700 text-white px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition hidden">
                 <i class="fa-solid fa-plus"></i> <span class="hidden sm:inline">ตั้งค่าข้อมูล</span>
             </button>
@@ -218,6 +222,13 @@
                             </div>
                         </div>
                         <p id="detailAddressText" class="text-xs text-slate-500 mt-1 flex items-center gap-1"><i class="fa-solid fa-location-dot"></i></p>
+                        
+                        <!-- เพิ่มส่วนนี้สำหรับแสดงผู้ติดต่อและที่อยู่ -->
+                        <div class="bg-slate-50 p-2.5 rounded-lg border border-slate-100 mt-3 space-y-1.5">
+                            <p id="detailContactName" class="text-xs text-slate-700 font-medium flex items-start gap-2"><i class="fa-solid fa-user-tie mt-0.5 text-slate-400"></i><span>ผู้ติดต่อ: -</span></p>
+                            <p id="detailFullAddress" class="text-[11px] text-slate-600 flex items-start gap-2"><i class="fa-solid fa-map-location mt-0.5 text-slate-400"></i><span>ที่อยู่: -</span></p>
+                        </div>
+
                         <div class="mt-4 pt-3 border-t border-slate-100">
                             <span class="text-[11px] text-slate-500 block">ยอดขายสะสม</span>
                             <span id="detailSales" class="text-lg font-bold text-blue-600">฿0</span>
@@ -535,6 +546,11 @@
             document.getElementById('detailName').innerText = entity.name;
             document.getElementById('detailType').innerText = `ประเภท: ${entity.type}`;
             document.getElementById('detailAddressText').innerText = `อ.${entity.district} จ.${entity.province}`;
+            
+            // นำข้อมูลติดต่อและที่อยู่มาแสดงผล
+            document.getElementById('detailContactName').innerText = `ผู้ติดต่อ: ${entity.contactName || 'ไม่ระบุ'}`;
+            document.getElementById('detailFullAddress').innerText = `ที่อยู่: ${entity.fullAddress || 'ไม่ระบุ'}`;
+            
             document.getElementById('detailSales').innerText = `฿${(parseFloat(entity.sales) || 0).toLocaleString()}`;
             
             const badge = document.getElementById('detailBadge');
