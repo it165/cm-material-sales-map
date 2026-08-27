@@ -183,11 +183,11 @@
         </div>
     </section>
 
-    <!-- Main Content Area (ปรับสัดส่วนแผนที่กับแท็บให้สมดุลบนมือถือ) -->
+    <!-- Main Content Area (ปรับสัดส่วนแผนที่กับแท็บให้สมดุลบนมือถือ และให้แผนที่ใหญ่สุดบน PC) -->
     <main class="flex-1 flex flex-col md:flex-row overflow-hidden relative">
 
-        <!-- Left Column: Map Container -->
-        <section class="w-full h-[40vh] md:h-full md:flex-1 relative shrink-0">
+        <!-- Left Column: Map Container (บน PC จะขยายเต็มพื้นที่ที่เหลือ md:flex-1) -->
+        <section class="w-full h-[45vh] shrink-0 md:h-full md:flex-1 relative">
             <div id="map"></div>
             
             <!-- Map Legend -->
@@ -215,8 +215,8 @@
             </div>
         </section>
 
-        <!-- Right Column: Sidebar -->
-        <section class="w-full md:w-[480px] lg:w-[520px] bg-white border-t md:border-t-0 md:border-l border-slate-200 flex flex-col flex-1 md:h-full z-10 shadow-lg overflow-hidden">
+        <!-- Right Column: Sidebar (บน PC ล็อกความกว้างไว้ เพื่อไม่ให้ไปเบียดแผนที่ md:flex-none) -->
+        <section class="w-full flex-1 md:flex-none md:w-[420px] lg:w-[480px] bg-white border-t md:border-t-0 md:border-l border-slate-200 flex flex-col md:h-full z-10 shadow-lg overflow-hidden">
             
             <!-- Tab Navigation Header -->
             <div class="flex border-b border-slate-200 bg-slate-50 overflow-x-auto custom-scrollbar">
