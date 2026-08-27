@@ -97,80 +97,80 @@
             </div>
         </div>
 
-        <!-- Action Controls & Filters -->
-        <div class="flex items-center flex-wrap gap-2">
-            <!-- Dynamic Filters (ถูกสร้างด้วย JS) -->
-            <select id="provinceFilter" onchange="filterMap()" class="bg-slate-50 text-xs text-slate-800 px-3 py-1.5 rounded-lg border border-slate-300 focus:outline-none focus:border-brand-500 focus:bg-white transition hidden sm:block">
+        <!-- Action Controls & Filters (ปรับเป็นแนวนอนเลื่อนได้บนมือถือ) -->
+        <div class="flex items-center gap-2 overflow-x-auto custom-scrollbar w-full sm:w-auto pb-1 sm:pb-0 pt-2 sm:pt-0">
+            <!-- Dynamic Filters -->
+            <select id="provinceFilter" onchange="filterMap()" class="bg-slate-50 text-xs text-slate-800 px-3 py-1.5 rounded-lg border border-slate-300 focus:outline-none focus:border-brand-500 focus:bg-white transition shrink-0">
                 <option value="ALL">เลือกทุกจังหวัด</option>
             </select>
-            <select id="districtFilter" onchange="filterMap()" class="bg-slate-50 text-xs text-slate-800 px-3 py-1.5 rounded-lg border border-slate-300 focus:outline-none focus:border-brand-500 focus:bg-white transition hidden sm:block">
+            <select id="districtFilter" onchange="filterMap()" class="bg-slate-50 text-xs text-slate-800 px-3 py-1.5 rounded-lg border border-slate-300 focus:outline-none focus:border-brand-500 focus:bg-white transition shrink-0">
                 <option value="ALL">ทุกอำเภอ</option>
             </select>
-            <select id="entityTypeFilter" onchange="filterMap()" class="bg-slate-50 text-xs text-slate-800 px-3 py-1.5 rounded-lg border border-slate-300 focus:outline-none focus:border-brand-500 focus:bg-white transition">
+            <select id="entityTypeFilter" onchange="filterMap()" class="bg-slate-50 text-xs text-slate-800 px-3 py-1.5 rounded-lg border border-slate-300 focus:outline-none focus:border-brand-500 focus:bg-white transition shrink-0">
                 <option value="ALL">ทุกประเภทลูกค้า</option>
             </select>
-            <select id="statusFilter" onchange="filterMap()" class="bg-slate-50 text-xs text-slate-800 px-3 py-1.5 rounded-lg border border-slate-300 focus:outline-none focus:border-brand-500 focus:bg-white transition">
+            <select id="statusFilter" onchange="filterMap()" class="bg-slate-50 text-xs text-slate-800 px-3 py-1.5 rounded-lg border border-slate-300 focus:outline-none focus:border-brand-500 focus:bg-white transition shrink-0">
                 <option value="ALL">ทุกสถานะ</option>
                 <option value="CUSTOMER">ลูกค้าปัจจุบัน (Customer)</option>
                 <option value="PROSPECT">เป้าหมาย (Prospect)</option>
             </select>
 
             <!-- Search Input -->
-            <div class="relative">
+            <div class="relative shrink-0">
                 <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-400 text-xs"></i>
                 <input type="text" id="searchInput" oninput="filterMap()" placeholder="ค้นหาชื่อ, อำเภอ..." 
-                    class="bg-slate-50 text-xs text-slate-800 pl-8 pr-3 py-1.5 rounded-lg border border-slate-300 focus:outline-none focus:border-brand-500 focus:bg-white w-32 sm:w-48 transition">
+                    class="bg-slate-50 text-xs text-slate-800 pl-8 pr-3 py-1.5 rounded-lg border border-slate-300 focus:outline-none focus:border-brand-500 focus:bg-white w-36 sm:w-48 transition">
             </div>
 
             <!-- Reload Data Button -->
-            <button onclick="loadDataFromGAS()" title="โหลดข้อมูลใหม่" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 border border-slate-300 transition">
+            <button onclick="loadDataFromGAS()" title="โหลดข้อมูลใหม่" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 border border-slate-300 transition shrink-0">
                 <i class="fa-solid fa-arrows-rotate"></i>
             </button>
 
             <!-- Add New Store Button (ซ่อนตาม Role) -->
-            <button id="btnAddData" onclick="alertMsg('เปิดชีตเพื่อเพิ่มข้อมูล Master Data')" class="bg-brand-600 hover:bg-brand-700 text-white px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 shadow-sm transition hidden">
+            <button id="btnAddData" onclick="alertMsg('เปิดชีตเพื่อเพิ่มข้อมูล Master Data')" class="bg-brand-600 hover:bg-brand-700 text-white px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 shadow-sm transition hidden shrink-0">
                 <i class="fa-solid fa-plus"></i>
                 <span class="hidden sm:inline">เพิ่มข้อมูล</span>
             </button>
 
             <!-- Logout Button -->
-            <button onclick="logout()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition">
+            <button onclick="logout()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition shrink-0">
                 <i class="fa-solid fa-right-from-bracket"></i>
             </button>
         </div>
     </header>
 
-    <!-- KPI Summary Bar -->
-    <section class="bg-slate-50 border-b border-slate-200 px-4 py-2 grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3 text-sm z-10">
-        <div class="bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
+    <!-- KPI Summary Bar (ปรับให้เป็น Slider แนวนอนบนมือถือ) -->
+    <section class="bg-slate-50 border-b border-slate-200 px-4 py-2 flex sm:grid sm:grid-cols-4 lg:grid-cols-6 gap-3 text-sm z-10 overflow-x-auto custom-scrollbar shrink-0">
+        <div class="bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between min-w-[140px] sm:min-w-0 shrink-0">
             <div>
                 <span class="text-slate-500 text-[10px] block font-medium">เป้าหมายรวม (ราย)</span>
                 <span id="kpiTotal" class="text-lg font-bold text-slate-800">0</span>
             </div>
             <div class="p-2 bg-slate-100 rounded-lg text-slate-600"><i class="fa-solid fa-users text-lg"></i></div>
         </div>
-        <div class="bg-white p-2.5 rounded-xl border border-emerald-200 shadow-sm flex items-center justify-between">
+        <div class="bg-white p-2.5 rounded-xl border border-emerald-200 shadow-sm flex items-center justify-between min-w-[150px] sm:min-w-0 shrink-0">
             <div>
                 <span class="text-slate-500 text-[10px] block font-medium">ลูกค้าปัจจุบัน (Customer)</span>
                 <span id="kpiCustomer" class="text-lg font-bold text-emerald-600">0</span>
             </div>
             <div class="p-2 bg-emerald-50 rounded-lg text-emerald-600"><i class="fa-solid fa-circle-check text-lg"></i></div>
         </div>
-        <div class="bg-white p-2.5 rounded-xl border border-rose-200 shadow-sm flex items-center justify-between">
+        <div class="bg-white p-2.5 rounded-xl border border-rose-200 shadow-sm flex items-center justify-between min-w-[140px] sm:min-w-0 shrink-0">
             <div>
                 <span class="text-slate-500 text-[10px] block font-medium">เป้าหมาย (Prospect)</span>
                 <span id="kpiProspect" class="text-lg font-bold text-rose-600">0</span>
             </div>
             <div class="p-2 bg-rose-50 rounded-lg text-rose-600"><i class="fa-solid fa-bullseye text-lg"></i></div>
         </div>
-        <div class="bg-white p-2.5 rounded-xl border border-blue-200 shadow-sm flex items-center justify-between">
+        <div class="bg-white p-2.5 rounded-xl border border-blue-200 shadow-sm flex items-center justify-between min-w-[150px] sm:min-w-0 shrink-0">
             <div>
                 <span class="text-slate-500 text-[10px] block font-medium">ยอดขายรวมในระบบ</span>
                 <span id="kpiRevenue" class="text-lg font-bold text-blue-600">฿0</span>
             </div>
             <div class="p-2 bg-blue-50 rounded-lg text-blue-600"><i class="fa-solid fa-hand-holding-dollar text-lg"></i></div>
         </div>
-        <div class="bg-white p-2.5 rounded-xl border border-amber-200 shadow-sm flex items-center justify-between col-span-2 sm:col-span-4 lg:col-span-2">
+        <div class="bg-white p-2.5 rounded-xl border border-amber-200 shadow-sm flex items-center justify-between col-span-2 sm:col-span-4 lg:col-span-2 min-w-[200px] sm:min-w-0 shrink-0">
             <div class="w-full">
                 <div class="flex justify-between items-center mb-1">
                     <span class="text-slate-500 text-[10px] font-medium">ยอดขายต่อเป้าหมาย (Sales vs Target)</span>
@@ -183,11 +183,11 @@
         </div>
     </section>
 
-    <!-- Main Content Area -->
+    <!-- Main Content Area (ปรับสัดส่วนแผนที่กับแท็บให้สมดุลบนมือถือ) -->
     <main class="flex-1 flex flex-col md:flex-row overflow-hidden relative">
 
         <!-- Left Column: Map Container -->
-        <section class="flex-1 h-[45%] md:h-full relative">
+        <section class="w-full h-[40vh] md:h-full md:flex-1 relative shrink-0">
             <div id="map"></div>
             
             <!-- Map Legend -->
@@ -216,7 +216,7 @@
         </section>
 
         <!-- Right Column: Sidebar -->
-        <section class="w-full md:w-[480px] lg:w-[520px] bg-white border-t md:border-t-0 md:border-l border-slate-200 flex flex-col h-3/5 md:h-full z-10 shadow-lg">
+        <section class="w-full md:w-[480px] lg:w-[520px] bg-white border-t md:border-t-0 md:border-l border-slate-200 flex flex-col flex-1 md:h-full z-10 shadow-lg overflow-hidden">
             
             <!-- Tab Navigation Header -->
             <div class="flex border-b border-slate-200 bg-slate-50 overflow-x-auto custom-scrollbar">
@@ -1054,6 +1054,17 @@
                 body.classList.add('hidden'); chev.className = 'fa-solid fa-chevron-up';
             }
         }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            if (window.innerWidth < 768) {
+                const body = document.getElementById('legendBody');
+                const chev = document.getElementById('legendChevron');
+                if(body && chev) {
+                    body.classList.add('hidden');
+                    chev.className = 'fa-solid fa-chevron-up';
+                }
+            }
+        });
 
         function alertMsg(msg) {
             const toast = document.createElement('div');
