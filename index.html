@@ -365,33 +365,39 @@
             }
         };
 
-        // --- MODULE: Data Loading (ดึงข้อมูลจาก Google Sheets จริงผ่าน GAS) ---
-        function loadDataFromGAS() {
+        // --- MODULE: Data Loading (ดึงข้อมูลจาก Google Sheets ผ่าน API สำหรับ GitHub) ---
+        async function loadDataFromGAS() {
             // แจ้งเตือนสถานะกำลังโหลด
             const listContainer = document.getElementById('entityListContainer');
-            if (listContainer) listContainer.innerHTML = '<div class="text-center py-8 text-slate-500"><i class="fa-solid fa-spinner fa-spin text-2xl mb-2"></i><br>กำลังดึงข้อมูลจาก Google Sheets...</div>';
+            if (listContainer) listContainer.innerHTML = '<div class="text-center py-8 text-slate-500"><i class="fa-solid fa-spinner fa-spin text-2xl mb-2"></i><br>กำลังดึงข้อมูลจาก Google Sheets (API)...</div>';
 
-            if (typeof google !== 'undefined' && google.script && google.script.run) {
-                // ยิงไปเรียกฟังก์ชัน getMergedData() ฝั่งหลังบ้าน (Code.gs)
-                google.script.run
-                    .withSuccessHandler(function(data) {
-                        if(data && data.length > 0) {
-                            AppState.entities = data;
-                            renderDashboard(); // อัปเดต UI เมื่อโหลดสำเร็จ
-                        } else {
-                            if(listContainer) listContainer.innerHTML = '<div class="text-center py-8 text-slate-400 text-xs">ไม่พบข้อมูลในระบบ</div>';
-                        }
-                    })
-                    .withFailureHandler(function(error) {
-                        console.error("GAS Error:", error);
-                        alertMsg("เกิดข้อผิดพลาดในการดึงข้อมูล: " + error.message);
-                        if(listContainer) listContainer.innerHTML = '<div class="text-center py-8 text-rose-500 text-xs">Error: ' + error.message + '</div>';
-                    })
-                    .getMergedData();
-            } else {
-                console.warn("ไม่ได้รันบนสภาพแวดล้อม Google Apps Script");
-                alertMsg("แจ้งเตือน: นำโค้ดไปรันบน Google Apps Script เพื่อดึงข้อมูลจริง");
-                if(listContainer) listContainer.innerHTML = '<div class="text-center py-8 text-slate-400 text-xs">รันบนหน้า Preview<br>(ลบข้อมูล Mockup ออกแล้ว ต้องเชื่อมต่อ Sheet จริง)</div>';
+            // TODO: นำ Web App URL ที่ได้จาก Google Apps Script มาใส่ตรงนี้
+            const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbz9DkplRFjqkcalJl6_7GKiEwxwvAmwShiuLNreUpUgXW6RhGGPJM_t9sFlCP_2g60s/exec';
+
+            if (GAS_API_URL === 'https://script.google.com/macros/s/AKfycbz9DkplRFjqkcalJl6_7GKiEwxwvAmwShiuLNreUpUgXW6RhGGPJM_t9sFlCP_2g60s/exec') {
+                console.warn("ยังไม่ได้ใส่ Web App URL");
+                alertMsg("แจ้งเตือน: กรุณาใส่ Web App URL จาก GAS ในโค้ด HTML เพื่อเชื่อมต่อข้อมูล");
+                if(listContainer) listContainer.innerHTML = '<div class="text-center py-8 text-rose-500 text-xs"><b>Missing API URL:</b><br>กรุณานำ Web App URL จาก GAS มาตั้งค่าในโค้ด (ตัวแปร GAS_API_URL)</div>';
+                return;
+            }
+
+            try {
+                // ยิง API ไปยัง Google Apps Script (GET Request)
+                const response = await fetch(GAS_API_URL);
+                if (!response.ok) throw new Error('Network response was not ok');
+                
+                const result = await response.json();
+                
+                if (result.status === 'success' && result.data && result.data.length > 0) {
+                    AppState.entities = result.data;
+                    renderDashboard(); // อัปเดต UI เมื่อโหลดสำเร็จ
+                } else {
+                    if(listContainer) listContainer.innerHTML = '<div class="text-center py-8 text-slate-400 text-xs">ไม่พบข้อมูลในระบบ หรือรูปแบบข้อมูลว่างเปล่า</div>';
+                }
+            } catch (error) {
+                console.error("API Fetch Error:", error);
+                alertMsg("เกิดข้อผิดพลาดในการเชื่อมต่อฐานข้อมูล: " + error.message);
+                if(listContainer) listContainer.innerHTML = '<div class="text-center py-8 text-rose-500 text-xs">Error: ' + error.message + '<br>โปรดตรวจสอบ URL หรือตั้งค่าสิทธิ์ GAS ให้เป็น Anyone</div>';
             }
         }
 
