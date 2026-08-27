@@ -5,33 +5,22 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ระบบแผนที่และวิเคราะห์ยอดขายวัสดุก่อสร้าง จ.เชียงใหม่ (Sales Territory & AI Analytics)</title>
     
-    <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
             theme: {
-                extend: {
-                    colors: {
-                        brand: { 50: '#eff6ff', 100: '#dbeafe', 500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8' }
-                    }
-                }
+                extend: { colors: { brand: { 50: '#eff6ff', 100: '#dbeafe', 500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8' } } }
             }
         }
     </script>
-    
-    <!-- Font Awesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Google Font: Kanit -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     
-    <!-- Google Maps API -->
-    <!-- แทนที่ YOUR_API_KEY ด้วย API Key ของคุณ หากไม่มีให้เว้นไว้ (ระบบจะรันในโหมด Demo) -->
-    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB8LhO_UqwwbPPPLcO0yDx2gOnUOGSrB-M&libraries=marker"></script>
-
     <!-- Chart.js for Market Analytics -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Google Maps API (นำ API Key ของคุณมาใส่ตรงนี้) -->
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB8LhO_UqwwbPPPLcO0yDx2gOnUOGSrB-M&libraries=marker" async defer></script>
 
     <style>
         body { font-family: 'Kanit', sans-serif; }
@@ -40,553 +29,465 @@
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
         #map { width: 100%; height: 100%; z-index: 10; }
-        
-        /* Custom Google Maps InfoWindow */
-        .gm-style-iw-c {
-            border-radius: 0.75rem !important;
-            padding: 12px !important;
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1) !important;
+        .custom-pin {
+            width: 32px; height: 32px; border-radius: 50%;
+            border: 2px solid #ffffff; box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            display: flex; align-items: center; justify-content: center;
+            color: white; font-size: 14px; cursor: pointer; transition: transform 0.2s;
         }
-        .gm-style-iw-d {
-            overflow: hidden !important;
-        }
-        
-        /* Fullscreen Overlay for Login */
-        #loginOverlay {
-            backdrop-filter: blur(8px);
-            z-index: 9999;
-        }
+        .custom-pin:hover { transform: scale(1.15); z-index: 1000 !important; }
     </style>
 </head>
 <body class="h-full text-slate-800 flex flex-col overflow-hidden bg-slate-100">
 
-    <!-- หน้าจอ Login (บังหน้าจอทั้งหมดจนกว่าจะเข้าระบบ) -->
-    <div id="loginOverlay" class="fixed inset-0 bg-slate-900/60 flex items-center justify-center transition-opacity duration-300">
-        <div class="bg-white rounded-2xl p-8 max-w-sm w-full mx-4 shadow-2xl text-center transform transition-all">
-            <div class="w-16 h-16 bg-brand-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <i class="fa-solid fa-map-location-dot text-3xl text-brand-600"></i>
+    <div id="loginOverlay" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-[9999] flex items-center justify-center">
+        <div class="bg-white p-8 rounded-2xl shadow-2xl max-w-sm w-full text-center">
+            <div class="w-16 h-16 bg-[#06C755] rounded-2xl mx-auto flex items-center justify-center mb-4 shadow-lg">
+                <i class="fa-brands fa-line text-4xl text-white"></i>
             </div>
-            <h2 class="text-xl font-bold text-slate-800 mb-2">Sales Territory & AI</h2>
-            <p class="text-sm text-slate-500 mb-6">ระบบแผนที่และวิเคราะห์ยอดขายวัสดุก่อสร้าง จ.เชียงใหม่</p>
-            
-            <button onclick="loginWithLine('admin')" class="w-full bg-[#00B900] hover:bg-[#009900] text-white font-bold py-3 px-4 rounded-xl shadow-lg transition flex items-center justify-center gap-3 mb-3">
-                <i class="fa-brands fa-line text-2xl"></i>
-                เข้าสู่ระบบด้วย LINE (ผู้บริหาร)
+            <h2 class="text-xl font-bold text-slate-800 mb-2">เข้าสู่ระบบ</h2>
+            <p class="text-sm text-slate-500 mb-6">ระบบจัดการข้อมูลพื้นที่การขาย จ.เชียงใหม่</p>
+            <button onclick="loginWithLine('admin')" class="w-full bg-[#06C755] hover:bg-[#05b34c] text-white font-bold py-3 px-4 rounded-xl transition shadow-md flex items-center justify-center gap-2 mb-3">
+                <i class="fa-solid fa-user-shield"></i> เข้าสู่ระบบ (ผู้บริหาร/แอดมิน)
             </button>
-            <button onclick="loginWithLine('sales')" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2.5 px-4 rounded-xl shadow-sm transition flex items-center justify-center gap-3">
-                <i class="fa-solid fa-user-tie"></i>
-                เข้าสู่ระบบ (พนักงานขาย)
+            <button onclick="loginWithLine('user')" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 px-4 rounded-xl transition flex items-center justify-center gap-2">
+                <i class="fa-solid fa-user"></i> เข้าสู่ระบบ (พนักงานขาย)
             </button>
-            
-            <p class="text-xs text-slate-400 mt-4">Demo: จำลองการล็อกอินเพื่อกำหนดสิทธิ์การเข้าถึงข้อมูล</p>
         </div>
     </div>
 
-    <!-- Header Navigation -->
     <header class="bg-white border-b border-slate-200 px-4 py-3 flex flex-wrap items-center justify-between gap-3 shadow-sm z-20">
         <div class="flex items-center space-x-3">
-            <div class="p-2.5 bg-gradient-to-tr from-brand-600 to-indigo-600 rounded-xl shadow-md text-white">
+            <div class="p-2.5 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-xl shadow-md text-white">
                 <i class="fa-solid fa-map-location-dot text-xl"></i>
             </div>
             <div>
                 <h1 class="font-bold text-lg leading-tight text-slate-800 flex items-center gap-2">
-                    CM Sales Territory & AI
+                    CM Sales Territory & Market AI
                     <span class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">จ.เชียงใหม่</span>
                 </h1>
-                <p class="text-xs text-slate-500">
-                    <span id="userInfoDisplay" class="font-medium text-brand-600"></span> | วิเคราะห์ส่วนแบ่งตลาด
-                </p>
+                <p class="text-xs text-slate-500">ระบบแผนที่แบ่งโซนร้านค้า และ AI วิเคราะห์ส่วนแบ่งตลาด</p>
             </div>
         </div>
 
         <!-- Action Controls & Filters -->
         <div class="flex items-center flex-wrap gap-2">
-            <!-- ประเภทจุดบนแผนที่ -->
-            <select id="entityTypeFilter" onchange="filterMap()" class="bg-slate-50 text-xs text-slate-800 px-3 py-1.5 rounded-lg border border-slate-300 focus:outline-none focus:border-brand-500 focus:bg-white transition">
-                <option value="ALL">ดูเป้าหมายทั้งหมด</option>
-                <option value="ค้าช่วง">🏢 ค้าช่วง (ร้านค้า)</option>
-                <option value="ผู้รับเหมา">👷 ผู้รับเหมา</option>
-                <option value="โครงการ">🏗️ โครงการก่อสร้าง</option>
-            </select>
-
-            <!-- District Filter -->
-            <select id="districtFilter" onchange="filterMap()" class="bg-slate-50 text-xs text-slate-800 px-3 py-1.5 rounded-lg border border-slate-300 focus:outline-none focus:border-brand-500 focus:bg-white transition hidden sm:block">
-                <option value="ALL">ทุกอำเภอในเชียงใหม่</option>
-                <option value="เมืองเชียงใหม่">อ.เมืองเชียงใหม่</option>
-                <option value="หางดง">อ.หางดง</option>
-                <option value="สันทราย">อ.สันทราย</option>
-                <option value="แม่ริม">อ.แม่ริม</option>
-                <option value="สันกำแพง">อ.สันกำแพง</option>
-                <option value="สารภี">อ.สารภี</option>
-            </select>
-
-            <!-- Search Input -->
+            <!-- ค้นหา -->
             <div class="relative">
                 <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-400 text-xs"></i>
-                <input type="text" id="searchInput" oninput="filterMap()" placeholder="ค้นหาชื่อ, อำเภอ..." 
-                    class="bg-slate-50 text-xs text-slate-800 pl-8 pr-3 py-1.5 rounded-lg border border-slate-300 focus:outline-none focus:border-brand-500 focus:bg-white w-32 sm:w-48 transition">
+                <input type="text" id="searchInput" oninput="filterMap()" placeholder="ค้นหาร้านค้า, อำเภอ..." 
+                    class="bg-slate-50 text-xs text-slate-800 pl-8 pr-3 py-1.5 rounded-lg border border-slate-300 focus:outline-none focus:border-blue-500 focus:bg-white w-44 sm:w-56 transition">
             </div>
 
-            <!-- Add New Store Button (ซ่อนตาม Role) -->
-            <button id="btnAddData" onclick="alertMsg('ฟังก์ชันเพิ่มข้อมูลจะถูกเปิดใช้งานเมื่อเชื่อมต่อกับ Google Sheets/Database จริง')" class="bg-brand-600 hover:bg-brand-700 text-white px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 shadow-sm transition hidden">
-                <i class="fa-solid fa-plus"></i>
-                <span class="hidden sm:inline">เพิ่มข้อมูล</span>
+            <!-- หมวดหมู่ลูกค้า/โครงการ -->
+            <select id="entityTypeFilter" onchange="filterMap()" class="bg-slate-50 text-xs text-slate-800 px-3 py-1.5 rounded-lg border border-slate-300 focus:outline-none focus:border-blue-500 focus:bg-white transition">
+                <option value="ALL">ประเภทเป้าหมายทั้งหมด</option>
+            </select>
+
+            <!-- หมวดสินค้า -->
+            <select id="categoryFilter" onchange="filterMap()" class="bg-slate-50 text-xs text-slate-800 px-3 py-1.5 rounded-lg border border-slate-300 focus:outline-none focus:border-blue-500 focus:bg-white transition hidden sm:block">
+                <option value="ALL">ทุกหมวดสินค้า</option>
+            </select>
+
+            <!-- อำเภอ -->
+            <select id="districtFilter" onchange="filterMap()" class="bg-slate-50 text-xs text-slate-800 px-3 py-1.5 rounded-lg border border-slate-300 focus:outline-none focus:border-blue-500 focus:bg-white transition hidden md:block">
+                <option value="ALL">ทุกอำเภอ</option>
+            </select>
+
+            <!-- Add New Button (เฉพาะ Admin) -->
+            <button id="btnAddData" onclick="alert('ฟังก์ชันเพิ่มข้อมูลบนชีตจริงกำลังพัฒนา')" class="hidden bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 shadow-sm transition">
+                <i class="fa-solid fa-plus"></i> <span>เพิ่มข้อมูล</span>
             </button>
 
-            <!-- Logout Button -->
-            <button onclick="logout()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition">
-                <i class="fa-solid fa-right-from-bracket"></i>
+            <!-- Sync Button -->
+            <button onclick="loadDataFromGAS()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition">
+                <i class="fa-solid fa-rotate text-xs"></i> <span class="hidden sm:inline">รีเฟรชฐานข้อมูล</span>
             </button>
+            
+            <button onclick="logout()" class="text-xs text-slate-500 hover:text-rose-600 ml-2" title="ออกจากระบบ"><i class="fa-solid fa-sign-out-alt"></i></button>
         </div>
     </header>
 
-    <!-- KPI Summary Bar -->
-    <section class="bg-slate-50 border-b border-slate-200 px-4 py-2 grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3 text-sm">
-        <div class="bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
-            <div>
-                <span class="text-slate-500 text-[10px] block font-medium">เป้าหมาย (ราย)</span>
-                <span id="kpiTotal" class="text-lg font-bold text-slate-800">0</span>
-            </div>
-            <div class="p-2 bg-slate-100 rounded-lg text-slate-600">
-                <i class="fa-solid fa-users text-lg"></i>
-            </div>
+    <section class="bg-slate-50 border-b border-slate-200 px-4 py-2 grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3 text-sm z-10">
+        <div class="bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm flex justify-between items-center">
+            <div><span class="text-slate-500 text-[11px] block">เป้าหมายทั้งหมด</span><span id="kpiTotal" class="text-lg font-bold text-slate-800">0</span></div>
+            <div class="p-1.5 bg-slate-100 rounded-lg text-slate-600"><i class="fa-solid fa-users text-sm"></i></div>
         </div>
-        <div class="bg-white p-2.5 rounded-xl border border-emerald-200 shadow-sm flex items-center justify-between">
-            <div>
-                <span class="text-slate-500 text-[10px] block font-medium">ลูกค้าปัจจุบัน (Customer)</span>
-                <span id="kpiCustomer" class="text-lg font-bold text-emerald-600">0</span>
-            </div>
-            <div class="p-2 bg-emerald-50 rounded-lg text-emerald-600">
-                <i class="fa-solid fa-circle-check text-lg"></i>
-            </div>
+        <div class="bg-white p-2.5 rounded-xl border border-emerald-200 shadow-sm flex justify-between items-center">
+            <div><span class="text-slate-500 text-[11px] block">ลูกค้าปัจจุบัน</span><span id="kpiCustomer" class="text-lg font-bold text-emerald-600">0</span></div>
+            <div class="p-1.5 bg-emerald-50 rounded-lg text-emerald-600"><i class="fa-solid fa-circle-check text-sm"></i></div>
         </div>
-        <div class="bg-white p-2.5 rounded-xl border border-rose-200 shadow-sm flex items-center justify-between">
-            <div>
-                <span class="text-slate-500 text-[10px] block font-medium">เป้าหมาย (Prospect)</span>
-                <span id="kpiProspect" class="text-lg font-bold text-rose-600">0</span>
-            </div>
-            <div class="p-2 bg-rose-50 rounded-lg text-rose-600">
-                <i class="fa-solid fa-bullseye text-lg"></i>
-            </div>
+        <div class="bg-white p-2.5 rounded-xl border border-rose-200 shadow-sm flex justify-between items-center">
+            <div><span class="text-slate-500 text-[11px] block">มุ่งหวัง (Prospect)</span><span id="kpiProspect" class="text-lg font-bold text-rose-600">0</span></div>
+            <div class="p-1.5 bg-rose-50 rounded-lg text-rose-600"><i class="fa-solid fa-bullseye text-sm"></i></div>
         </div>
-        <div class="bg-white p-2.5 rounded-xl border border-blue-200 shadow-sm flex items-center justify-between">
-            <div>
-                <span class="text-slate-500 text-[10px] block font-medium">ยอดขายรวมในระบบ</span>
-                <span id="kpiRevenue" class="text-lg font-bold text-blue-600">฿0</span>
-            </div>
-            <div class="p-2 bg-blue-50 rounded-lg text-blue-600">
-                <i class="fa-solid fa-hand-holding-dollar text-lg"></i>
-            </div>
-        </div>
-        <div class="bg-white p-2.5 rounded-xl border border-amber-200 shadow-sm flex items-center justify-between col-span-2 sm:col-span-4 lg:col-span-2">
-            <div class="w-full">
-                <div class="flex justify-between items-center mb-1">
-                    <span class="text-slate-500 text-[10px] font-medium">อัตราเจาะตลาดเชียงใหม่ (Market Pen.)</span>
-                    <span id="kpiShare" class="text-xs font-bold text-amber-600">0%</span>
-                </div>
-                <div class="w-full bg-slate-200 rounded-full h-1.5 overflow-hidden">
-                    <div id="kpiShareBar" class="bg-gradient-to-r from-amber-500 to-emerald-500 h-1.5 rounded-full" style="width: 0%"></div>
-                </div>
-            </div>
+        <div class="bg-white p-2.5 rounded-xl border border-blue-200 shadow-sm flex justify-between items-center">
+            <div><span class="text-slate-500 text-[11px] block">ยอดขายสะสมสุทธิ</span><span id="kpiRevenue" class="text-base font-bold text-blue-600">฿0</span></div>
+            <div class="p-1.5 bg-blue-50 rounded-lg text-blue-600"><i class="fa-solid fa-baht-sign text-sm"></i></div>
         </div>
     </section>
 
-    <!-- Main Content Area -->
     <main class="flex-1 flex flex-col md:flex-row overflow-hidden relative">
+        <!-- เลเยอร์แจ้งเตือนระบบโหลดข้อมูล -->
+        <div id="systemMessage" class="absolute top-4 left-1/2 transform -translate-x-1/2 bg-amber-100 border border-amber-300 text-amber-800 px-4 py-2 rounded-lg text-xs font-semibold shadow-lg z-50 hidden transition-all flex items-center gap-2">
+            <i class="fa-solid fa-circle-notch fa-spin"></i> <span id="sysMsgText">กำลังดำเนินการ...</span>
+        </div>
 
-        <!-- Left Column: Map Container -->
-        <section class="flex-1 h-[45%] md:h-full relative">
+        <!-- ฝั่งซ้าย: Google Map -->
+        <section class="flex-1 h-1/2 md:h-full relative">
             <div id="map"></div>
             
-            <!-- Map Legend -->
-            <div id="mapLegendBox" class="absolute bottom-4 left-4 bg-white/95 backdrop-blur border border-slate-200 text-xs p-3.5 rounded-xl shadow-xl z-[400] max-w-xs transition-all duration-300">
-                <div class="font-bold text-slate-800 flex items-center justify-between cursor-pointer select-none" onclick="toggleMapLegend()">
-                    <span class="flex items-center"><i class="fa-solid fa-layer-group text-brand-600 mr-1.5"></i>สัญลักษณ์จุดเป้าหมาย</span>
-                    <button id="toggleLegendBtn" class="text-slate-400 hover:text-slate-600 ml-3 p-0.5"><i id="legendChevron" class="fa-solid fa-chevron-down"></i></button>
+            <!-- Map Legend (กล่องอธิบายสี) -->
+            <div id="mapLegendBox" class="absolute bottom-6 right-14 md:bottom-8 md:left-4 bg-white/95 backdrop-blur border border-slate-200 text-xs p-3 rounded-xl shadow-xl z-30 max-w-[200px]">
+                <div class="font-bold text-slate-800 mb-2 border-b border-slate-100 pb-1">ระดับยอดขาย (รายอำเภอ)</div>
+                <div class="space-y-1.5">
+                    <div class="flex items-center gap-2"><span class="w-3 h-3 rounded bg-[#10b981] opacity-70 border border-[#059669]"></span><span>> 1.5 ล้านบาท</span></div>
+                    <div class="flex items-center gap-2"><span class="w-3 h-3 rounded bg-[#facc15] opacity-70 border border-[#ca8a04]"></span><span>5 แสน - 1.5 ล้าน</span></div>
+                    <div class="flex items-center gap-2"><span class="w-3 h-3 rounded bg-[#f97316] opacity-70 border border-[#c2410c]"></span><span>มีรายได้ (> 0 บาท)</span></div>
+                    <div class="flex items-center gap-2"><span class="w-3 h-3 rounded bg-[#ef4444] opacity-70 border border-[#b91c1c]"></span><span>ยังไม่มีรายได้ (0)</span></div>
                 </div>
-                <div id="legendBody" class="space-y-2 pt-2 border-t border-slate-200 mt-2">
-                    <div class="flex items-center gap-2"><span class="w-3 h-3 rounded bg-blue-500 flex items-center justify-center text-[8px] text-white shadow"><i class="fa-solid fa-store"></i></span><span>ค้าช่วง (ร้านค้าวัสดุ)</span></div>
-                    <div class="flex items-center gap-2"><span class="w-3 h-3 rounded bg-amber-500 flex items-center justify-center text-[8px] text-white shadow"><i class="fa-solid fa-helmet-safety"></i></span><span>ผู้รับเหมา</span></div>
-                    <div class="flex items-center gap-2"><span class="w-3 h-3 rounded bg-purple-500 flex items-center justify-center text-[8px] text-white shadow"><i class="fa-solid fa-building"></i></span><span>โครงการก่อสร้าง</span></div>
-                    
-                    <div class="border-t border-slate-100 pt-1.5 mt-1.5">
-                        <div class="text-[10px] font-semibold text-slate-500 mb-1">สีของกรอบจุดหมุด:</div>
-                        <div class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full border-2 border-emerald-500 bg-transparent"></span><span class="text-[11px]">ลูกค้าปัจจุบัน</span></div>
-                        <div class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full border-2 border-rose-500 bg-transparent"></span><span class="text-[11px]">เป้าหมาย (Prospect)</span></div>
-                    </div>
-
-                    <div class="border-t border-slate-100 pt-1.5 mt-1.5">
-                        <div class="text-[10px] font-semibold text-slate-500 mb-1">สีของพื้นที่อำเภอ (ตามยอดขาย):</div>
-                        <div class="grid grid-cols-2 gap-1 text-[10px]">
-                            <div class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded bg-green-500/50 border border-green-500"></span><span>สูง (>1.5M)</span></div>
-                            <div class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded bg-yellow-400/50 border border-yellow-500"></span><span>กลาง (0.5M-1.5M)</span></div>
-                            <div class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded bg-orange-500/50 border border-orange-500"></span><span>น้อย (<0.5M)</span></div>
-                            <div class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded bg-red-500/50 border border-red-500"></span><span>ไม่มี (0)</span></div>
-                        </div>
-                    </div>
+                <div class="font-bold text-slate-800 mt-3 mb-1 border-b border-slate-100 pb-1">สถานะ (Pins)</div>
+                <div class="space-y-1.5">
+                    <div class="flex items-center gap-2"><i class="fa-solid fa-circle text-emerald-500"></i><span>ลูกค้า (Customer)</span></div>
+                    <div class="flex items-center gap-2"><i class="fa-solid fa-circle text-rose-500"></i><span>มุ่งหวัง (Prospect)</span></div>
                 </div>
             </div>
         </section>
 
-        <!-- Right Column: Sidebar -->
-        <section class="w-full md:w-[480px] lg:w-[520px] bg-white border-t md:border-t-0 md:border-l border-slate-200 flex flex-col h-3/5 md:h-full z-10 shadow-lg">
+        <!-- ฝั่งขวา: Sidebar & Tabs -->
+        <section class="w-full md:w-[450px] lg:w-[500px] bg-white flex flex-col h-1/2 md:h-full z-40 shadow-[-4px_0_15px_-3px_rgba(0,0,0,0.1)]">
             
-            <!-- Tab Navigation Header -->
-            <div class="flex border-b border-slate-200 bg-slate-50 overflow-x-auto custom-scrollbar">
-                <button id="tabBtnList" onclick="switchTab('list')" class="flex-1 min-w-max py-3 px-3 text-xs font-semibold border-b-2 border-brand-600 text-brand-600 flex items-center justify-center gap-1.5 transition">
-                    <i class="fa-solid fa-list-ul"></i> รายชื่อ
-                </button>
-                <button id="tabBtnDetail" onclick="switchTab('detail')" class="flex-1 min-w-max py-3 px-3 text-xs font-semibold border-b-2 border-transparent text-slate-500 hover:text-slate-800 flex items-center justify-center gap-1.5 transition">
-                    <i class="fa-solid fa-circle-info"></i> รายละเอียด
-                </button>
-                <button id="tabBtnChart" onclick="switchTab('chart')" class="flex-1 min-w-max py-3 px-3 text-xs font-semibold border-b-2 border-transparent text-slate-500 hover:text-slate-800 flex items-center justify-center gap-1.5 transition">
-                    <i class="fa-solid fa-chart-line"></i> วิเคราะห์ตลาด
-                </button>
-                <button id="tabBtnAi" onclick="switchTab('ai')" class="flex-1 min-w-max py-3 px-3 text-xs font-semibold border-b-2 border-transparent text-slate-500 hover:text-slate-800 flex items-center justify-center gap-1.5 transition">
-                    <i class="fa-solid fa-robot text-purple-600"></i> กลยุทธ์ AI
-                </button>
+            <div class="flex border-b border-slate-200 bg-slate-50 shrink-0">
+                <button onclick="switchTab('list')" id="tabBtnList" class="flex-1 py-3 text-xs font-semibold border-b-2 border-blue-600 text-blue-600 transition"><i class="fa-solid fa-list-ul mr-1"></i> รายชื่อ</button>
+                <button onclick="switchTab('detail')" id="tabBtnDetail" class="flex-1 py-3 text-xs font-semibold border-b-2 border-transparent text-slate-500 hover:text-slate-800 transition"><i class="fa-solid fa-store mr-1"></i> รายละเอียด</button>
+                <button onclick="switchTab('chart')" id="tabBtnChart" class="flex-1 py-3 text-xs font-semibold border-b-2 border-transparent text-slate-500 hover:text-slate-800 transition"><i class="fa-solid fa-chart-pie mr-1"></i> ภาพรวม</button>
+                <button onclick="switchTab('ai')" id="tabBtnAi" class="flex-1 py-3 text-xs font-semibold border-b-2 border-transparent text-slate-500 hover:text-slate-800 transition"><i class="fa-solid fa-robot text-purple-600 mr-1"></i> AI กลยุทธ์</button>
             </div>
 
-            <!-- Tab Content: List -->
+            <!-- Tab 1: รายการ -->
             <div id="tabList" class="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-2 bg-slate-50/50">
                 <div class="flex justify-between items-center text-xs text-slate-500 px-1 py-1">
-                    <span>รายการเป้าหมาย (<span id="listCountText">0</span>)</span>
-                    <span class="text-[11px] text-slate-400">เรียงตามยอดขายสูงสุด</span>
+                    <span>พบข้อมูล: <span id="shopCountText" class="font-bold text-blue-600">0</span> รายการ</span>
                 </div>
-                <div id="entityListContainer" class="space-y-2">
-                    <!-- Dynamic cards -->
+                <div id="shopListContainer" class="space-y-2">
+                    <!-- Dynamic List Goes Here -->
                 </div>
             </div>
 
-            <!-- Tab Content: Detail -->
+            <!-- Tab 2: รายละเอียด & AI รายบุคคล -->
             <div id="tabDetail" class="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-4 hidden bg-slate-50/50">
-                <div id="noEntitySelected" class="text-center py-16 text-slate-400">
-                    <i class="fa-solid fa-location-dot text-4xl mb-3 block text-slate-300"></i>
-                    <p class="text-sm font-medium text-slate-600">กรุณาเลือกเป้าหมายจากรายการหรือแผนที่</p>
+                <div id="noShopSelected" class="text-center py-16 text-slate-400">
+                    <i class="fa-solid fa-hand-pointer text-4xl mb-3 text-slate-300"></i>
+                    <p class="text-sm font-medium text-slate-600">กรุณาเลือกเป้าหมายจากรายการหรือบนแผนที่</p>
                 </div>
 
-                <div id="entityDetailContent" class="hidden space-y-4">
-                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm relative overflow-hidden">
-                        <div id="detailBadge" class="absolute top-3 right-3 text-[10px] font-bold px-2.5 py-0.5 rounded-full border"></div>
-                        <div class="flex items-center gap-3 mb-2">
-                            <div id="detailIcon" class="text-2xl"></div>
-                            <div>
-                                <h2 id="detailName" class="text-base font-bold text-slate-800 pr-20"></h2>
-                                <p id="detailType" class="text-xs text-slate-500 font-medium"></p>
-                            </div>
-                        </div>
-                        <p id="detailAddressText" class="text-xs text-slate-500 mt-1 flex items-center gap-1"><i class="fa-solid fa-location-dot"></i></p>
-                        
+                <div id="shopDetailContent" class="hidden space-y-4">
+                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm relative">
+                        <div id="detailStatusBadge" class="absolute top-3 right-3 text-[10px] font-bold px-2.5 py-0.5 rounded-full">STATUS</div>
+                        <h2 id="detailShopName" class="text-base font-bold text-slate-800 pr-20">ชื่อ...</h2>
+                        <p class="text-xs text-slate-500 mt-1"><i class="fa-solid fa-location-dot mr-1"></i><span id="detailAddress">ที่อยู่...</span></p>
+                        <p class="text-xs text-slate-500 mt-1"><i class="fa-solid fa-tag mr-1"></i><span id="detailType">ประเภท...</span></p>
                         <div class="mt-4 pt-3 border-t border-slate-100">
-                            <span class="text-[11px] text-slate-500 block">ยอดขายสะสม</span>
-                            <span id="detailSales" class="text-lg font-bold text-blue-600">฿0</span>
+                            <span class="text-[11px] text-slate-500 block">ยอดขายรวมสะสม</span>
+                            <span id="detailTotalSales" class="text-lg font-bold text-blue-600">฿0</span>
                         </div>
                     </div>
 
-                    <div class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm">
-                        <h3 class="text-xs font-bold text-slate-700 mb-2 flex items-center"><i class="fa-solid fa-pie-chart text-blue-500 mr-1.5"></i> สัดส่วนสินค้า</h3>
-                        <div class="w-full h-48"><canvas id="detailCategoryChart"></canvas></div>
+                    <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
+                        <h3 class="text-xs font-bold text-slate-700 mb-2"><i class="fa-solid fa-chart-pie text-blue-500 mr-1"></i> สัดส่วนยอดขายตามหมวดสินค้า</h3>
+                        <div class="w-full h-40"><canvas id="shopCategoryChart"></canvas></div>
                     </div>
 
+                    <!-- Gemini AI Button -->
                     <div class="bg-gradient-to-br from-indigo-50 to-blue-50 p-4 rounded-xl border border-indigo-200 shadow-sm">
                         <div class="flex items-center justify-between mb-2">
-                            <div class="flex items-center space-x-2">
-                                <i class="fa-solid fa-wand-magic-sparkles text-indigo-600"></i>
-                                <h3 class="text-xs font-bold text-indigo-900">AI ช่วยวิเคราะห์เจาะตลาด</h3>
-                            </div>
-                            <button onclick="analyzeEntityWithAI()" id="btnAnalyzeEntity" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-3 py-1.5 rounded-lg font-medium transition flex items-center gap-1 shadow-sm">
-                                <i class="fa-solid fa-robot"></i> <span>วิเคราะห์</span>
+                            <h3 class="text-xs font-bold text-indigo-900"><i class="fa-solid fa-wand-magic-sparkles"></i> AI วิเคราะห์เป้าหมายนี้</h3>
+                            <button onclick="runAiShopAnalysis()" id="btnAiAnalyzeShop" class="bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] px-3 py-1.5 rounded-lg font-medium transition shadow-sm">
+                                เริ่มวิเคราะห์
                             </button>
                         </div>
-                        <div id="aiEntityOutput" class="bg-white p-3 rounded-lg border border-indigo-200 text-xs text-slate-700 leading-relaxed min-h-[80px] hidden whitespace-pre-line shadow-inner mt-3"></div>
+                        <div id="aiShopResult" class="bg-white p-3 rounded-lg border border-indigo-200 text-xs text-slate-700 leading-relaxed min-h-[80px] hidden whitespace-pre-line shadow-inner"></div>
                     </div>
                 </div>
             </div>
 
-            <!-- Tab: Dashboard / Charts -->
+            <!-- Tab 3: ภาพรวม (Charts) -->
             <div id="tabChart" class="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-4 hidden bg-slate-50/50">
                 <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
-                    <h3 class="text-xs font-bold text-slate-700 mb-2 text-center">ภาพรวมสถานะลูกค้า (Customer vs Prospect)</h3>
-                    <div class="w-full h-40 flex justify-center"><canvas id="overallStatusChart"></canvas></div>
+                    <h3 class="text-xs font-bold text-slate-700 mb-2 text-center">สัดส่วน ลูกค้า vs Prospect</h3>
+                    <div class="w-full h-44"><canvas id="marketShareChart"></canvas></div>
                 </div>
                 <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
-                    <h3 class="text-xs font-bold text-slate-700 mb-2 text-center">ยอดขายแบ่งตามประเภท</h3>
-                    <div class="w-full h-48"><canvas id="overallTypeChart"></canvas></div>
+                    <h3 class="text-xs font-bold text-slate-700 mb-2 text-center">ยอดขายแบ่งตามหมวดสินค้า</h3>
+                    <div class="w-full h-52"><canvas id="overallCategoryChart"></canvas></div>
                 </div>
             </div>
 
-            <!-- Tab: AI Strategy -->
-            <div id="tabAi" class="flex-1 overflow-y-auto custom-scrollbar p-4 hidden bg-slate-50/50">
-                <div class="bg-gradient-to-br from-purple-100 to-indigo-100 p-5 rounded-xl border border-purple-200 shadow-sm text-center">
-                    <i class="fa-solid fa-brain text-purple-600 text-4xl mb-3"></i>
-                    <h3 class="text-sm font-bold text-purple-900 mb-2">Gemini AI วางแผนกลยุทธ์ภาพรวม</h3>
-                    <p class="text-xs text-purple-700 mb-4 px-2">
-                        ส่งข้อมูลภาพรวมทั้งหมด (ค้าช่วง, ผู้รับเหมา, โครงการ, ยอดขาย) ให้ AI ประมวลผลเพื่อสร้าง Action Plan ระดับจังหวัด
-                    </p>
-                    <button onclick="generateOverallStrategy()" id="btnGenerateStrategy" class="w-full bg-purple-600 hover:bg-purple-700 text-white text-sm font-bold py-3 px-4 rounded-xl shadow transition flex items-center justify-center gap-2">
-                        <i class="fa-solid fa-wand-magic-sparkles"></i>
-                        <span>ประมวลผลข้อมูลสร้างกลยุทธ์</span>
+            <!-- Tab 4: AI กลยุทธ์ระดับจังหวัด -->
+            <div id="tabAi" class="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-4 hidden bg-slate-50/50">
+                <div class="bg-gradient-to-br from-purple-100/70 to-indigo-100/70 p-4 rounded-xl border border-purple-200 shadow-sm text-center">
+                    <i class="fa-solid fa-brain text-purple-700 text-3xl mb-2"></i>
+                    <h3 class="text-sm font-bold text-purple-900 mb-2">AI วางแผนกลยุทธ์ จ.เชียงใหม่</h3>
+                    <p class="text-xs text-slate-600 mb-4">ให้ Gemini ประมวลผลข้อมูลเป้าหมายและยอดขายทั้งหมด เพื่อค้นหา "พื้นที่ศักยภาพ" และวางแผนบุกตลาด</p>
+                    <button onclick="generateProvincialStrategy()" id="btnGenerateStrategy" class="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 text-white text-xs font-bold py-2.5 px-4 rounded-lg shadow-md transition">
+                        <i class="fa-solid fa-wand-magic-sparkles mr-1"></i> ประมวลผลแผนระดับจังหวัด
                     </button>
                 </div>
-                <div id="aiStrategyOutput" class="mt-4 bg-white p-4 rounded-xl border border-slate-200 text-xs text-slate-800 leading-relaxed min-h-[160px] whitespace-pre-line hidden shadow-sm">
-                </div>
+                <div id="provincialAiOutput" class="bg-white p-4 rounded-xl border border-slate-200 text-xs text-slate-700 leading-relaxed min-h-[160px] whitespace-pre-line hidden shadow-sm"></div>
             </div>
         </section>
     </main>
 
-    <!-- ========================================== -->
-    <!-- JAVASCRIPT MODULES & LOGIC                 -->
-    <!-- ========================================== -->
     <script>
-        // --- MODULE: State Management & Models ---
-        const AppState = {
-            currentUser: null,
+        // ----------------------------------------------------
+        // ส่วนสำคัญ: ตั้งค่า URL API (GAS) และ Gemini API KEY ที่นี่
+        // ----------------------------------------------------
+        const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbz9DkplRFjqkcalJl6_7GKiEwxwvAmwShiuLNreUpUgXW6RhGGPJM_t9sFlCP_2g60s/exec';
+        const GEMINI_API_KEY = 'AQ.Ab8RN6KE-iFSo814nLErpys8JbecKp-eSMijt_sWeNzretxkSw';
+
+        // 25 อำเภอในเชียงใหม่ เพื่อสร้าง "White Space" พื้นที่สีแดง (ยอดขาย 0) บนแผนที่
+        const CHIANG_MAI_DISTRICTS = [
+            "เมืองเชียงใหม่", "จอมทอง", "แม่แจ่ม", "เชียงดาว", "ดอยสะเก็ด", "แม่แตง", "แม่ริม", "สะเมิง", 
+            "ฝาง", "แม่อาย", "พร้าว", "สันป่าตอง", "สันกำแพง", "สันทราย", "หางดง", "ฮอด", "ดอยเต่า", 
+            "อมก๋อย", "สารภี", "เวียงแหง", "ไชยปราการ", "แม่วาง", "แม่ออน", "ดอยหล่อ", "กัลยาณิวัฒนา"
+        ];
+
+        let AppState = {
+            currentUserRole: null,
             entities: [],
-            activeEntity: null,
             mapInstance: null,
             markers: [],
-            infoWindow: null,
-            geoJsonLoaded: false // ติดตามสถานะการโหลดขอบเขตแผนที่
+            mapDataLayer: null,
+            activeEntityId: null,
+            charts: { share: null, overall: null, detail: null }
         };
 
-        const MARKET_CAP_CM = 12500000000;
-        // --- STREAMING_CHUNK: จัดการข้อผิดพลาด Google Maps API Key ---
-        window.gm_authFailure = function() {
-            const mapDiv = document.getElementById('map');
-            if (mapDiv) {
-                mapDiv.innerHTML = `
-                    <div class="absolute inset-0 z-50 flex flex-col items-center justify-center bg-slate-100 p-6 text-center border-2 border-dashed border-slate-300 m-4 rounded-xl">
-                        <i class="fa-solid fa-key text-4xl text-slate-400 mb-4"></i>
-                        <h2 class="text-lg font-bold text-slate-700">ไม่พบ Google Maps API Key</h2>
-                        <p class="text-sm text-slate-500 mt-2 max-w-sm">คุณพบข้อผิดพลาด <b>InvalidKeyMapError</b> เนื่องจากยังไม่ได้ใส่ API Key ของจริงในแท็ก script</p>
-                        <p class="text-xs font-semibold text-brand-600 mt-4 px-3 py-1.5 bg-brand-50 rounded-lg">ฟังก์ชันอื่นๆ (รายชื่อ, กราฟ, AI) ยังใช้งานได้ตามปกติ</p>
-                    </div>
-                `;
-            }
-        };
-
-        // --- MODULE: Data Loading (ดึงข้อมูลจาก Google Sheets ผ่าน API สำหรับ GitHub) ---
-        async function loadDataFromGAS() {
-            // แจ้งเตือนสถานะกำลังโหลด
-            const listContainer = document.getElementById('entityListContainer');
-            if (listContainer) listContainer.innerHTML = '<div class="text-center py-8 text-slate-500"><i class="fa-solid fa-spinner fa-spin text-2xl mb-2"></i><br>กำลังดึงข้อมูลจาก Google Sheets (API)...</div>';
-
-            // TODO: นำ Web App URL ที่ได้จาก Google Apps Script อันใหม่มาใส่ตรงนี้
-            const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbz9DkplRFjqkcalJl6_7GKiEwxwvAmwShiuLNreUpUgXW6RhGGPJM_t9sFlCP_2g60s/exec';
-
-            if (GAS_API_URL === 'YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL') {
-                console.warn("ยังไม่ได้ใส่ Web App URL");
-                if(listContainer) listContainer.innerHTML = '<div class="text-center py-8 text-rose-500 text-xs"><b>Missing API URL:</b><br>กรุณานำ Web App URL จาก GAS มาตั้งค่าในโค้ด</div>';
-                return;
-            }
-
-            try {
-                const response = await fetch(GAS_API_URL);
-                if (!response.ok) throw new Error('Network response was not ok');
-                
-                const result = await response.json();
-                
-                if (result.status === 'success' && result.data && result.data.length > 0) {
-                    AppState.entities = result.data;
-                    renderDashboard(); 
-                } else if (result.status === 'success' && result.debug) {
-                    // แดชบอร์ดรายงานข้อผิดพลาดจากฐานข้อมูล
-                    console.log("GAS Debug Info:", result.debug);
-                    if(listContainer) {
-                        listContainer.innerHTML = `
-                            <div class="p-4 bg-amber-50 border border-amber-200 rounded-xl m-2 text-xs text-slate-700 shadow-sm">
-                                <h4 class="font-bold text-amber-600 mb-2 text-sm"><i class="fa-solid fa-triangle-exclamation"></i> รายงานปัญหาข้อมูลว่างเปล่า</h4>
-                                <ul class="space-y-1 mb-2">
-                                    <li><b>ชื่อแท็บที่ระบบมองเห็นใน Sheet นี้:</b> <span class="text-slate-500">${result.debug.foundSheets.join(', ')}</span></li>
-                                    ${result.debug.missing.length > 0 ? `<li class="text-rose-600"><b>❌ ค้นหาแท็บไม่พบ:</b> ${result.debug.missing.join(', ')} (กรุณาเช็คชื่อแท็บด้านล่าง)</li>` : `<li class="text-emerald-600">✅ ค้นพบแท็บครบถ้วน</li>`}
-                                </ul>
-                                <hr class="border-amber-100 my-2">
-                                <div class="font-semibold mb-1">จำนวนบรรทัดที่อ่านข้อมูลได้:</div>
-                                <ul class="grid grid-cols-2 gap-1 text-[11px]">
-                                    <li>ค้าช่วง: <b class="${result.debug.counts.subDealers === 0 ? 'text-rose-500' : 'text-blue-600'}">${result.debug.counts.subDealers}</b> ร้าน</li>
-                                    <li>ผู้รับเหมา: <b class="${result.debug.counts.contractors === 0 ? 'text-rose-500' : 'text-blue-600'}">${result.debug.counts.contractors}</b> ราย</li>
-                                    <li>โครงการ: <b class="${result.debug.counts.projects === 0 ? 'text-rose-500' : 'text-blue-600'}">${result.debug.counts.projects}</b> แห่ง</li>
-                                    <li>ยอดขาย: <b>${result.debug.counts.sales}</b> รายการ</li>
-                                </ul>
-                                <div class="mt-3 text-[10px] text-amber-600 bg-amber-100/50 p-2 rounded">
-                                    * หากพบจำนวนร้านค้า (เช่นค้าช่วง) แต่ดึงมาไม่ได้ แสดงว่าในชีตไม่มีคอลัมน์ชื่อ <b>id</b> หรือพิมพ์ชื่อคอลัมน์ตกหล่น
-                                </div>
-                            </div>
-                        `;
-                    }
-                } else {
-                    if(listContainer) listContainer.innerHTML = '<div class="text-center py-8 text-slate-400 text-xs">ข้อมูลในฐานข้อมูลว่างเปล่า หรือดึงมาไม่ได้</div>';
-                }
-            } catch (error) {
-                console.error("API Fetch Error:", error);
-                if(listContainer) listContainer.innerHTML = `<div class="text-center py-8 text-rose-500 text-xs">Error: ${error.message}<br>โปรดตรวจสอบ URL หรือการตั้งค่าสิทธิ์ Anyone ใน GAS</div>`;
-            }
-        }
-
-        // --- MODULE: Authentication & Auth UI ---
+        // --- STREAMING_CHUNK: ฟังก์ชัน Auth (Login/Logout) ---
         function loginWithLine(role) {
-            AppState.currentUser = { role: role, name: role === 'admin' ? 'ผู้บริหาร (Admin)' : 'คุณสมหมาย (Sales)' };
+            AppState.currentUserRole = role;
+            document.getElementById('loginOverlay').classList.add('hidden');
             
-            // ซ่อนหน้าต่าง Login Overlay
-            document.getElementById('loginOverlay').classList.add('opacity-0');
-            setTimeout(() => {
-                document.getElementById('loginOverlay').classList.add('hidden');
-            }, 300);
-
-            // อัปเดตข้อมูลผู้ใช้บน Header
-            document.getElementById('userInfoDisplay').innerText = AppState.currentUser.name;
-
-            // จัดการสิทธิ์ UI: ให้แสดงปุ่ม 'เพิ่มข้อมูล' เฉพาะผู้บริหาร
             if (role === 'admin') {
                 document.getElementById('btnAddData').classList.remove('hidden');
+                showSysMsg('เข้าสู่ระบบสำเร็จ (สิทธิ์ผู้บริหาร)', 'success');
             } else {
                 document.getElementById('btnAddData').classList.add('hidden');
+                showSysMsg('เข้าสู่ระบบสำเร็จ (พนักงานขาย)', 'success');
             }
 
-            // เริ่มต้นแผนที่ และ ยิง API ไปดึงข้อมูลจาก Google Sheets ทันที
-            initMap();
+            // เริ่มโหลดข้อมูลทันที
             loadDataFromGAS();
+            initGoogleMap();
         }
 
         function logout() {
-            // เคลียร์ข้อมูลและแสดงหน้าต่าง Login อีกครั้ง
-            AppState.currentUser = null;
+            AppState.currentUserRole = null;
+            AppState.entities = [];
             document.getElementById('loginOverlay').classList.remove('hidden');
-            setTimeout(() => {
-                document.getElementById('loginOverlay').classList.remove('opacity-0');
-            }, 10);
-            document.getElementById('userInfoDisplay').innerText = '';
+            if (AppState.mapInstance && AppState.mapDataLayer) {
+                AppState.mapDataLayer.forEach(feature => AppState.mapDataLayer.remove(feature));
+                clearMarkers();
+            }
+            renderDashboard();
         }
-            
-        // --- STREAMING_CHUNK: กำหนดการทำงานของแผนที่ Google Maps ---
-        function initMap() {
-            if (AppState.mapInstance) return; // Prevent double init
-            
-            // ป้องกันแอปแครชกรณี Google Maps API โหลดไม่สำเร็จหรือ Key ผิดพลาด
-            if (typeof google === 'undefined' || !google.maps) {
-                console.warn("Google Maps API not loaded or invalid key.");
+
+        function showSysMsg(text, type = 'info') {
+            const msgBox = document.getElementById('systemMessage');
+            document.getElementById('sysMsgText').innerText = text;
+            msgBox.className = `absolute top-4 left-1/2 transform -translate-x-1/2 px-4 py-2 rounded-lg text-xs font-semibold shadow-lg z-50 flex items-center gap-2 transition-all ${
+                type === 'error' ? 'bg-rose-100 border-rose-300 text-rose-800' :
+                type === 'success' ? 'bg-emerald-100 border-emerald-300 text-emerald-800' :
+                'bg-amber-100 border-amber-300 text-amber-800'
+            }`;
+            msgBox.classList.remove('hidden');
+            setTimeout(() => msgBox.classList.add('hidden'), 4000);
+        }
+
+        // --- STREAMING_CHUNK: ดึงข้อมูลจาก GAS Backend ---
+        async function loadDataFromGAS() {
+            if (GAS_API_URL === 'YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL') {
+                showSysMsg('กรุณาตั้งค่า GAS API URL ในโค้ด', 'error');
                 return;
             }
-            
-            // ตั้งค่า Google Maps ศูนย์กลางเชียงใหม่
-            const mapOptions = {
-                center: { lat: 18.7883, lng: 98.9853 },
-                zoom: 11,
-                mapId: 'DEMO_MAP_ID', // จำเป็นต้องมี mapId สำหรับใช้ AdvancedMarkerElement
-                mapTypeControl: false,
-                streetViewControl: false,
-                fullscreenControl: true,
-                zoomControl: true
-            };
-            
-            AppState.mapInstance = new google.maps.Map(document.getElementById('map'), mapOptions);
-            AppState.infoWindow = new google.maps.InfoWindow();
-        }
 
-        function getMarkerConfig(entity) {
-            let bgColor = '#64748b'; // default
-            let iconClass = 'fa-circle';
-            
-            // สีไอคอนตาม Type
-            if (entity.type === 'ค้าช่วง') { bgColor = '#3b82f6'; iconClass = 'fa-store'; }
-            else if (entity.type === 'ผู้รับเหมา') { bgColor = '#f59e0b'; iconClass = 'fa-helmet-safety'; }
-            else if (entity.type === 'โครงการ') { bgColor = '#a855f7'; iconClass = 'fa-building'; }
-
-            // สีกรอบตาม Status (ลูกค้าปัจจุบัน vs Prospect)
-            let borderColor = entity.status === 'CUSTOMER' ? '#10b981' : '#f43f5e';
-
-            return { bgColor, iconClass, borderColor };
-        }
-
-        function renderMapMarkers(filteredData) {
-            // เช็คความพร้อมของ Google Maps ก่อนวาดหมุด
-            if (typeof google === 'undefined' || !google.maps || !AppState.mapInstance) return;
-
-            // Clear เก่าทิ้ง
-            if (AppState.markers) {
-                AppState.markers.forEach(marker => {
-                    marker.map = null;
-                });
-            }
-            AppState.markers = [];
-
-            const bounds = new google.maps.LatLngBounds();
-            let hasPoints = false;
-
-            filteredData.forEach(entity => {
-                const config = getMarkerConfig(entity);
+            showSysMsg('กำลังโหลดข้อมูลฐานข้อมูล...', 'info');
+            try {
+                const response = await fetch(GAS_API_URL);
+                if (!response.ok) throw new Error('Network response was not ok');
+                const result = await response.json();
                 
-                // สร้าง Custom HTML สำหรับ Pin ของ Google Maps
-                const pinElement = document.createElement('div');
-                pinElement.innerHTML = `
-                    <div style="background-color: ${config.bgColor}; width: 28px; height: 28px; border-radius: 50%; border: 3px solid ${config.borderColor}; box-shadow: 0 4px 6px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; color: white; font-size: 12px; cursor: pointer;">
-                        <i class="fa-solid ${config.iconClass}"></i>
-                    </div>
-                `;
+                if (result.status === 'success' && result.data) {
+                    AppState.entities = result.data;
+                    populateFilterDropdowns(AppState.entities); 
+                    renderDashboard(); 
+                    showSysMsg('ซิงค์ข้อมูลสำเร็จ', 'success');
+                } else {
+                    console.warn("GAS Report:", result);
+                    showSysMsg('ไม่พบข้อมูล หรือรูปแบบคอลัมน์ไม่ถูกต้อง', 'error');
+                }
+            } catch (error) {
+                console.error('Fetch Error:', error);
+                showSysMsg('การเชื่อมต่อล้มเหลว ตรวจสอบ URL', 'error');
+            }
+        }
 
-                // ใช้ AdvancedMarkerElement แทน Marker ธรรมดาเพื่อให้ใส่ HTML ได้
-                const marker = new google.maps.marker.AdvancedMarkerElement({
-                    map: AppState.mapInstance,
-                    position: { lat: entity.lat, lng: entity.lng },
-                    content: pinElement,
-                    title: entity.name
-                });
-
-                const statusHtml = entity.status === 'CUSTOMER' 
-                    ? '<span class="text-emerald-600 font-bold bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">ลูกค้าปัจจุบัน</span>' 
-                    : '<span class="text-rose-600 font-bold bg-rose-50 px-1.5 py-0.5 rounded border border-rose-200">Prospect</span>';
-
-                const popupContent = `
-                    <div class="text-xs space-y-1 p-1" style="font-family: 'Kanit', sans-serif; min-width: 220px;">
-                        <div class="font-bold text-slate-800 text-sm">${entity.name}</div>
-                        <div class="text-slate-500 flex items-center justify-between gap-3 mt-1 mb-2">
-                            <span>อ.${entity.district} | ${entity.type}</span>
-                            ${statusHtml}
-                        </div>
-                        <div class="text-blue-600 font-bold text-xs pt-1 border-t border-slate-100">ยอดขาย: ฿${(entity.sales).toLocaleString()}</div>
-                        <button onclick="selectEntity('${entity.id}')" class="w-full mt-2 bg-brand-600 hover:bg-brand-700 text-white font-medium text-[11px] py-1.5 rounded-lg transition">
-                            ดูรายละเอียด & วิเคราะห์ด้วย AI
-                        </button>
-                    </div>
-                `;
-
-                // Event เปิด InfoWindow เมื่อคลิก
-                marker.addListener('click', () => {
-                    AppState.infoWindow.setContent(popupContent);
-                    AppState.infoWindow.open({
-                        anchor: marker,
-                        map: AppState.mapInstance,
-                    });
-                });
-
-                AppState.markers.push(marker);
-                bounds.extend({ lat: entity.lat, lng: entity.lng });
-                hasPoints = true;
+        // --- STREAMING_CHUNK: Google Maps & Choropleth Logic ---
+        function initGoogleMap() {
+            if (typeof google === 'undefined' || !google.maps) {
+                showSysMsg('โหลดแผนที่ไม่สำเร็จ (ตรวจสอบ API Key)', 'error');
+                return;
+            }
+            // CM Center
+            AppState.mapInstance = new google.maps.Map(document.getElementById('map'), {
+                zoom: 9,
+                center: { lat: 18.7883, lng: 98.9853 },
+                mapId: 'DEMO_MAP_ID', // Requires mapId for AdvancedMarkerElement
+                disableDefaultUI: true,
+                zoomControl: true,
+                styles: [ { featureType: "poi", elementType: "labels", stylers: [{ visibility: "off" }] } ]
             });
 
-            if (hasPoints) {
-                AppState.mapInstance.fitBounds(bounds);
-                // ป้องกันซูมใกล้เกินไปถ้ามีจุดเดียว
-                if (AppState.markers.length === 1) {
-                    const listener = google.maps.event.addListener(AppState.mapInstance, 'idle', function() {
-                        if (AppState.mapInstance.getZoom() > 14) AppState.mapInstance.setZoom(14);
-                        google.maps.event.removeListener(listener);
-                    });
-                }
-            }
+            AppState.mapDataLayer = new google.maps.Data({ map: AppState.mapInstance });
+            loadChiangMaiBoundaries();
         }
 
-        // --- STREAMING_CHUNK: ฟังก์ชัน Filter ข้อมูล และควบคุม UI รายการ ---
+        function loadChiangMaiBoundaries() {
+            if (!AppState.mapDataLayer) return;
+            // ดึงไฟล์พิกัดอำเภอประเทศไทย
+            fetch('https://raw.githubusercontent.com/chingchai/OpenGISData-Thailand/master/districts.geojson')
+                .then(r => r.json())
+                .then(geoJson => {
+                    // กรองเฉพาะเชียงใหม่
+                    geoJson.features = geoJson.features.filter(f => f.properties && (f.properties.pro_th === 'เชียงใหม่' || f.properties.pro_code === '50'));
+                    AppState.mapDataLayer.addGeoJson(geoJson);
+                    updateChoroplethColors();
+                })
+                .catch(e => console.error("GeoJSON Error", e));
+        }
+
+        function updateChoroplethColors() {
+            if (!AppState.mapDataLayer) return;
+            const filteredData = getFilteredData();
+            
+            // คำนวณยอดขายรวมแบ่งตามอำเภอ
+            const districtSales = {};
+            // กำหนดค่าเริ่มต้น 0 ให้ทุกอำเภอในเชียงใหม่ (สร้าง White Space)
+            CHIANG_MAI_DISTRICTS.forEach(dist => districtSales[dist] = 0);
+            
+            filteredData.forEach(item => {
+                if (item.district) {
+                    const cleanDist = item.district.replace('อำเภอ', '').trim();
+                    districtSales[cleanDist] = (districtSales[cleanDist] || 0) + (parseFloat(item.sales) || 0);
+                }
+            });
+
+            // ตั้งค่าสีแต่ละโซนตามยอดขาย
+            AppState.mapDataLayer.setStyle(function(feature) {
+                const ampName = feature.getProperty('amp_th') || feature.getProperty('AMP_TH');
+                const sales = districtSales[ampName] || 0;
+                
+                let fillColor = '#ef4444'; // แดง (0 บาท)
+                if (sales > 1500000) fillColor = '#10b981'; // เขียว (มาก)
+                else if (sales >= 500000) fillColor = '#facc15'; // เหลือง (กลาง)
+                else if (sales > 0) fillColor = '#f97316'; // ส้ม (น้อย)
+
+                return {
+                    fillColor: fillColor,
+                    fillOpacity: 0.35,
+                    strokeColor: fillColor,
+                    strokeWeight: 1.5,
+                    title: `อ.${ampName}: ยอดขาย ฿${sales.toLocaleString()}`
+                };
+            });
+        }
+
+        function renderMapMarkers() {
+            if (!AppState.mapInstance || typeof google === 'undefined' || !google.maps.marker) return;
+            clearMarkers();
+            
+            const filtered = getFilteredData();
+            filtered.forEach(item => {
+                const isCustomer = (item.status || '').toUpperCase() === 'CUSTOMER';
+                const color = isCustomer ? '#10b981' : '#f43f5e';
+                const iconClass = isCustomer ? 'fa-check' : 'fa-bullseye';
+                
+                const pinElement = document.createElement('div');
+                pinElement.className = 'custom-pin';
+                pinElement.style.backgroundColor = color;
+                pinElement.innerHTML = `<i class="fa-solid ${iconClass}"></i>`;
+                
+                pinElement.addEventListener('click', () => {
+                    selectEntity(String(item.id));
+                });
+
+                const lat = parseFloat(item.lat);
+                const lng = parseFloat(item.lng);
+
+                if (!isNaN(lat) && !isNaN(lng)) {
+                    const marker = new google.maps.marker.AdvancedMarkerElement({
+                        map: AppState.mapInstance,
+                        position: { lat: lat, lng: lng },
+                        content: pinElement,
+                        title: item.name
+                    });
+                    AppState.markers.push(marker);
+                }
+            });
+        }
+
+        function clearMarkers() {
+            AppState.markers.forEach(m => { if (m) m.map = null; });
+            AppState.markers = [];
+        }
+
+        // --- STREAMING_CHUNK: UI & Data Filtering ---
+        function populateFilterDropdowns(data) {
+            const types = new Set();
+            const categories = new Set();
+
+            data.forEach(entity => {
+                if (entity.type) types.add(entity.type);
+                if (entity.categories) Object.keys(entity.categories).forEach(cat => categories.add(cat));
+            });
+
+            // อำเภอ (ใช้ค่าคงที่เพื่อบังคับให้มีครบ 25 อำเภอเสมอ)
+            const districtSelect = document.getElementById('districtFilter');
+            const currentDist = districtSelect.value;
+            districtSelect.innerHTML = '<option value="ALL">ทุกอำเภอ</option>';
+            CHIANG_MAI_DISTRICTS.sort().forEach(d => districtSelect.innerHTML += `<option value="${d}">อ.${d}</option>`);
+            districtSelect.value = currentDist;
+
+            // ประเภท (ค้าช่วง, โครงการ ฯลฯ)
+            const typeSelect = document.getElementById('entityTypeFilter');
+            const currentType = typeSelect.value;
+            typeSelect.innerHTML = '<option value="ALL">ประเภทเป้าหมายทั้งหมด</option>';
+            Array.from(types).sort().forEach(t => typeSelect.innerHTML += `<option value="${t}">${t}</option>`);
+            if(Array.from(types).includes(currentType)) typeSelect.value = currentType;
+
+            // หมวดสินค้า (ปูน, เหล็ก)
+            const catSelect = document.getElementById('categoryFilter');
+            const currentCat = catSelect.value;
+            catSelect.innerHTML = '<option value="ALL">ทุกหมวดสินค้า</option>';
+            Array.from(categories).sort().forEach(c => catSelect.innerHTML += `<option value="${c}">${c}</option>`);
+            if(Array.from(categories).includes(currentCat)) catSelect.value = currentCat;
+        }
+
         function getFilteredData() {
             const search = document.getElementById('searchInput').value.toLowerCase().trim();
             const district = document.getElementById('districtFilter').value;
             const type = document.getElementById('entityTypeFilter').value;
+            const category = document.getElementById('categoryFilter').value;
 
             return AppState.entities.filter(item => {
-                const matchSearch = item.name.toLowerCase().includes(search) || item.district.includes(search);
+                const matchSearch = (item.name || '').toLowerCase().includes(search) || (item.district || '').includes(search);
                 const matchDistrict = district === 'ALL' || item.district === district;
                 const matchType = type === 'ALL' || item.type === type;
-                return matchSearch && matchDistrict && matchType;
+                
+                let matchCategory = category === 'ALL';
+                if (!matchCategory && item.categories) {
+                    matchCategory = (item.categories[category] || 0) > 0;
+                }
+                return matchSearch && matchDistrict && matchType && matchCategory;
             });
         }
 
@@ -597,390 +498,214 @@
         function renderDashboard() {
             const data = getFilteredData();
             
-            // 1. Update Map Markers
-            renderMapMarkers(data);
-            
-            // 2. Render District Zones with Colors based on Sales
-            renderDistrictZones(data);
-            
-            // 3. Update List
-            renderList(data);
-            
-            // 4. Update KPIs
-            updateKPIs(data);
-            
-            // 5. Update Charts
-            updateCharts(data);
-        }
-
-        // --- STREAMING_CHUNK: ฟังก์ชันวาดเส้นขอบเขตและระบายสีอำเภอ ---
-        function renderDistrictZones(filteredData) {
-            if (!AppState.mapInstance || typeof google === 'undefined' || !google.maps) return;
-
-            // 1. คำนวณยอดขายรวมแยกตามอำเภอ จากข้อมูลที่ถูก Filter
-            const districtSales = {};
-            filteredData.forEach(entity => {
-                if (!districtSales[entity.district]) districtSales[entity.district] = 0;
-                districtSales[entity.district] += (entity.sales || 0);
+            // KPI Bar
+            let customers = 0, prospects = 0, totalRev = 0;
+            data.forEach(d => {
+                if ((d.status || '').toUpperCase() === 'CUSTOMER') customers++;
+                else prospects++;
+                totalRev += (parseFloat(d.sales) || 0);
             });
 
-            // 2. กำหนดเกณฑ์สีตามยอดขาย
-            function getDistrictColor(sales) {
-                if (sales === undefined || sales === 0) return '#ef4444'; // Red (Zero)
-                if (sales < 500000) return '#f97316'; // Orange (Low)
-                if (sales < 1500000) return '#eab308'; // Yellow (Medium)
-                return '#22c55e'; // Green (High)
-            }
-
-            // 3. ตั้งค่า Style ของ Data Layer ใน Google Maps ให้เปลี่ยนสีไดนามิก
-            AppState.mapInstance.data.setStyle(function(feature) {
-                const provName = feature.getProperty('pro_th');
-                const isChiangMai = provName === 'เชียงใหม่';
-                
-                let distName = feature.getProperty('amp_th') || "";
-                if (distName.startsWith("อำเภอ")) distName = distName.replace("อำเภอ", "").trim();
-
-                const sales = districtSales[distName] || 0;
-                const color = getDistrictColor(sales);
-
-                return {
-                    fillColor: color,
-                    fillOpacity: isChiangMai ? 0.35 : 0.0, // แสดงความทึบเฉพาะเชียงใหม่
-                    strokeWeight: isChiangMai ? 2 : 0,
-                    strokeColor: color,
-                    strokeOpacity: 0.8,
-                    visible: isChiangMai
-                };
-            });
-
-            // 4. โหลด GeoJSON ขอบเขตประเทศไทย (ดึงมาเฉพาะเชียงใหม่) โหลดแค่ครั้งแรกครั้งเดียว
-            if (!AppState.geoJsonLoaded) {
-                fetch('https://raw.githubusercontent.com/chingchai/OpenGISData-Thailand/master/districts.geojson')
-                    .then(res => res.json())
-                    .then(data => {
-                        // กรองเอาเฉพาะจังหวัดเชียงใหม่เพื่อลดภาระเครื่อง
-                        data.features = data.features.filter(f => f.properties.pro_th === 'เชียงใหม่');
-                        AppState.mapInstance.data.addGeoJson(data);
-                        AppState.geoJsonLoaded = true;
-                        
-                        // เพิ่ม Event เมื่อเอาเมาส์ไปชี้พื้นที่
-                        AppState.mapInstance.data.addListener('mouseover', function(event) {
-                            AppState.mapInstance.data.overrideStyle(event.feature, { fillOpacity: 0.6, strokeWeight: 3 });
-                        });
-                        AppState.mapInstance.data.addListener('mouseout', function(event) {
-                            AppState.mapInstance.data.revertStyle();
-                        });
-                    })
-                    .catch(err => console.error("ไม่สามารถโหลดข้อมูลขอบเขตอำเภอได้:", err));
-            }
-        }
-
-        function renderList(data) {
-            document.getElementById('listCountText').innerText = data.length;
-            const container = document.getElementById('entityListContainer');
-            
-            if(data.length === 0) {
-                container.innerHTML = '<div class="text-center py-8 text-slate-400 text-xs">ไม่พบข้อมูลตามเงื่อนไข</div>';
-                return;
-            }
-
-            // Sort by sales DESC
-            const sorted = [...data].sort((a,b) => b.sales - a.sales);
-
-            container.innerHTML = sorted.map(item => {
-                const isCust = item.status === 'CUSTOMER';
-                const config = getMarkerConfig(item);
-                
-                return `
-                    <div onclick="selectEntity('${item.id}')" class="bg-white hover:border-brand-400 p-3 rounded-xl border border-slate-200 cursor-pointer transition flex items-center justify-between shadow-sm">
-                        <div class="flex items-center gap-3">
-                            <div style="background-color: ${config.bgColor};" class="w-8 h-8 rounded-full flex items-center justify-center text-white shrink-0">
-                                <i class="fa-solid ${config.iconClass} text-xs"></i>
-                            </div>
-                            <div>
-                                <h4 class="text-xs font-bold text-slate-800 line-clamp-1">${item.name}</h4>
-                                <div class="text-[10px] text-slate-500 flex gap-2 mt-0.5">
-                                    <span>${item.type}</span><span>|</span><span>อ.${item.district}</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="text-right shrink-0">
-                            <span class="text-xs font-bold text-blue-600 block">฿${(item.sales).toLocaleString()}</span>
-                            <span class="text-[9px] px-1.5 py-0.5 rounded border font-medium ${isCust ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-rose-50 text-rose-700 border-rose-200'}">
-                                ${isCust ? 'ลูกค้า' : 'Prospect'}
-                            </span>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-        }
-
-        // --- STREAMING_CHUNK: ฟังก์ชันคำนวณกราฟและ KPI ---
-        function updateKPIs(data) {
-            const total = data.length;
-            const customers = data.filter(d => d.status === 'CUSTOMER').length;
-            const prospects = data.filter(d => d.status === 'PROSPECT').length;
-            const totalRev = data.reduce((sum, d) => sum + d.sales, 0);
-            
-            document.getElementById('kpiTotal').innerText = total;
+            document.getElementById('kpiTotal').innerText = data.length;
             document.getElementById('kpiCustomer').innerText = customers;
             document.getElementById('kpiProspect').innerText = prospects;
             document.getElementById('kpiRevenue').innerText = `฿${totalRev.toLocaleString()}`;
 
-            // คำนวณ Market Pen
-            const penPercent = ((totalRev / MARKET_CAP_CM) * 100).toFixed(4);
-            document.getElementById('kpiShare').innerText = `${penPercent}%`;
-            // ให้กราฟแท่งขยับแบบ relative เพื่อให้เห็นภาพ (ปกติ % น้อยมาก) สมมติเป้าคือ 1%
-            const targetVisual = Math.min((totalRev / (MARKET_CAP_CM * 0.01)) * 100, 100);
-            document.getElementById('kpiShareBar').style.width = `${targetVisual}%`;
+            renderList(data);
+            renderMapMarkers();
+            updateChoroplethColors();
+            renderOverallCharts(customers, prospects, data);
         }
 
-        let chartStatus, chartType, chartDetail;
-
-        function updateCharts(data) {
-            // Chart 1: Status Donut
-            const customers = data.filter(d => d.status === 'CUSTOMER').length;
-            const prospects = data.filter(d => d.status === 'PROSPECT').length;
+        function renderList(data) {
+            const container = document.getElementById('shopListContainer');
+            document.getElementById('shopCountText').innerText = data.length;
             
-            const ctx1 = document.getElementById('overallStatusChart').getContext('2d');
-            if(chartStatus) chartStatus.destroy();
-            chartStatus = new Chart(ctx1, {
-                type: 'doughnut',
-                data: {
-                    labels: ['ลูกค้าปัจจุบัน', 'Prospect'],
-                    datasets: [{ data: [customers, prospects], backgroundColor: ['#10b981', '#f43f5e'] }]
-                },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: {font: {size: 10, family: 'Kanit'}} } } }
-            });
+            if (data.length === 0) {
+                container.innerHTML = `<div class="text-center py-6 text-slate-400 text-xs">ไม่พบข้อมูล</div>`;
+                return;
+            }
 
-            // Chart 2: Type Bar
-            const salesByType = { 'ค้าช่วง': 0, 'ผู้รับเหมา': 0, 'โครงการ': 0 };
-            data.forEach(d => { salesByType[d.type] += d.sales; });
-
-            const ctx2 = document.getElementById('overallTypeChart').getContext('2d');
-            if(chartType) chartType.destroy();
-            chartType = new Chart(ctx2, {
-                type: 'bar',
-                data: {
-                    labels: Object.keys(salesByType),
-                    datasets: [{ label: 'ยอดขาย (บาท)', data: Object.values(salesByType), backgroundColor: '#3b82f6', borderRadius: 4 }]
-                },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
-            });
+            const sorted = [...data].sort((a,b) => (b.sales || 0) - (a.sales || 0));
+            container.innerHTML = sorted.map(item => {
+                const isC = (item.status || '').toUpperCase() === 'CUSTOMER';
+                const amt = parseFloat(item.sales) || 0;
+                return `
+                    <div onclick="selectEntity('${item.id}')" class="bg-white p-3 rounded-lg border border-slate-200 cursor-pointer shadow-sm flex items-center justify-between hover:border-blue-400 transition">
+                        <div>
+                            <div class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full ${isC?'bg-emerald-500':'bg-rose-500'}"></span><h4 class="text-xs font-bold">${item.name}</h4></div>
+                            <div class="text-[10px] text-slate-500 mt-1">อ.${item.district} | ${item.type || 'ทั่วไป'}</div>
+                        </div>
+                        <div class="text-right">
+                            <span class="block text-xs font-bold text-blue-600">฿${amt.toLocaleString()}</span>
+                            <span class="text-[9px] px-1.5 rounded bg-slate-100">${isC?'ลูกค้า':'Prospect'}</span>
+                        </div>
+                    </div>`;
+            }).join('');
         }
 
-        // --- STREAMING_CHUNK: ส่วนจัดการการเลือกข้อมูลรายตัว ---
-        function selectEntity(id) {
-            // แก้ไข: แปลง id เป็น String ทั้งคู่ก่อนเปรียบเทียบ ป้องกันปัญหาจาก Google Sheets
-            const entity = AppState.entities.find(e => String(e.id) === String(id));
-            if (!entity) return;
-            AppState.activeEntity = entity;
+        function selectEntity(idStr) {
+            const target = AppState.entities.find(e => String(e.id) === idStr);
+            if (!target) return;
+            AppState.activeEntityId = idStr;
 
             switchTab('detail');
-            document.getElementById('noEntitySelected').classList.add('hidden');
-            document.getElementById('entityDetailContent').classList.remove('hidden');
+            document.getElementById('noShopSelected').classList.add('hidden');
+            document.getElementById('shopDetailContent').classList.remove('hidden');
 
-            document.getElementById('detailName').innerText = entity.name;
-            document.getElementById('detailType').innerText = `ประเภทเป้าหมาย: ${entity.type}`;
-            document.getElementById('detailAddressText').innerText = `อำเภอ${entity.district} จ.เชียงใหม่`;
-            document.getElementById('detailSales').innerText = `฿${(parseFloat(entity.sales) || 0).toLocaleString()}`;
-
-            const badge = document.getElementById('detailBadge');
-            const iconObj = getMarkerConfig(entity);
-            document.getElementById('detailIcon').innerHTML = `<i class="fa-solid ${iconObj.iconClass}" style="color:${iconObj.bgColor}"></i>`;
-
-            if (entity.status === 'CUSTOMER') {
-                badge.innerText = 'ลูกค้าปัจจุบัน';
-                badge.className = 'absolute top-3 right-3 text-[10px] font-bold px-2.5 py-0.5 rounded-full border bg-emerald-50 text-emerald-700 border-emerald-200';
-            } else {
-                badge.innerText = 'Prospect';
-                badge.className = 'absolute top-3 right-3 text-[10px] font-bold px-2.5 py-0.5 rounded-full border bg-rose-50 text-rose-700 border-rose-200';
-            }
-
-            // Update Detail Chart
-            const ctx = document.getElementById('detailCategoryChart').getContext('2d');
-            if(chartDetail) chartDetail.destroy();
+            document.getElementById('detailShopName').innerText = target.name;
+            document.getElementById('detailAddress').innerText = `อ.${target.district} จ.เชียงใหม่`;
+            document.getElementById('detailType').innerText = target.type || 'ไม่ระบุประเภท';
+            document.getElementById('detailTotalSales').innerText = `฿${(parseFloat(target.sales) || 0).toLocaleString()}`;
             
-            // ป้องกัน Error กรณีไม่มีข้อมูลหมวดสินค้า
-            const categories = entity.categories || {};
-            const cats = Object.keys(categories);
-            const vals = Object.values(categories);
+            const badge = document.getElementById('detailStatusBadge');
+            const isC = (target.status || '').toUpperCase() === 'CUSTOMER';
+            badge.innerText = isC ? 'ลูกค้าปัจจุบัน' : 'มุ่งหวัง (PROSPECT)';
+            badge.className = `absolute top-3 right-3 text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${isC ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-rose-50 text-rose-700 border-rose-200'}`;
 
-            if(cats.length === 0) {
-                chartDetail = new Chart(ctx, { type: 'doughnut', data: { labels: ['ไม่มีข้อมูล'], datasets: [{ data:[1], backgroundColor: ['#e2e8f0'] }] }, options: { responsive:true, maintainAspectRatio:false }});
-            } else {
-                chartDetail = new Chart(ctx, {
-                    type: 'pie',
-                    data: { labels: cats, datasets: [{ data: vals, backgroundColor: ['#2563eb', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899'] }] },
-                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: {font: {size: 10, family: 'Kanit'}} } } }
-                });
+            // Pan Map
+            if (AppState.mapInstance && !isNaN(parseFloat(target.lat))) {
+                AppState.mapInstance.panTo({ lat: parseFloat(target.lat), lng: parseFloat(target.lng) });
+                AppState.mapInstance.setZoom(14);
             }
 
-            // Reset AI box
-            const aiBox = document.getElementById('aiEntityOutput');
-            aiBox.classList.add('hidden');
-            aiBox.innerText = '';
-
-            // Pan Map (Google Maps) ป้องกันกรณีไม่มี Map และแปลงพิกัดให้เป็นตัวเลขเสมอ
-            if(AppState.mapInstance && typeof google !== 'undefined' && google.maps) {
-                const mapLat = parseFloat(entity.lat);
-                const mapLng = parseFloat(entity.lng);
-                
-                if (!isNaN(mapLat) && !isNaN(mapLng)) {
-                    AppState.mapInstance.panTo({ lat: mapLat, lng: mapLng });
-                    AppState.mapInstance.setZoom(14);
-                }
-                
-                if (AppState.infoWindow) {
-                    AppState.infoWindow.close(); // ปิด popup เก่าเมื่อเลือกจาก list
-                }
-            }
+            renderDetailChart(target.categories);
+            
+            // Reset AI Box
+            const aiBox = document.getElementById('aiShopResult');
+            aiBox.classList.add('hidden'); aiBox.innerText = '';
         }
 
-        // --- STREAMING_CHUNK: การเชื่อมต่อ API ของ Gemini AI ของจริง ---
-        async function analyzeEntityWithAI() {
-            const entity = AppState.activeEntity;
-            if(!entity) return;
+        // --- STREAMING_CHUNK: การแสดงผลกราฟ (Chart.js) ---
+        function renderOverallCharts(customers, prospects, data) {
+            // Chart 1: Donut Share
+            const ctx1 = document.getElementById('marketShareChart').getContext('2d');
+            if (AppState.charts.share) AppState.charts.share.destroy();
+            AppState.charts.share = new Chart(ctx1, {
+                type: 'doughnut',
+                data: { labels: ['ลูกค้า', 'Prospect'], datasets: [{ data: [customers, prospects], backgroundColor: ['#10b981', '#f43f5e'] }] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { font: { size: 10, family: 'Kanit' } } } } }
+            });
 
-            const btn = document.getElementById('btnAnalyzeEntity');
-            const output = document.getElementById('aiEntityOutput');
+            // Chart 2: Category Bar
+            const catTotals = {};
+            data.forEach(d => {
+                if (d.categories) {
+                    for (const [cat, val] of Object.entries(d.categories)) {
+                        catTotals[cat] = (catTotals[cat] || 0) + (parseFloat(val) || 0);
+                    }
+                }
+            });
+            const ctx2 = document.getElementById('overallCategoryChart').getContext('2d');
+            if (AppState.charts.overall) AppState.charts.overall.destroy();
+            AppState.charts.overall = new Chart(ctx2, {
+                type: 'bar',
+                data: { labels: Object.keys(catTotals), datasets: [{ data: Object.values(catTotals), backgroundColor: '#3b82f6', borderRadius: 4 }] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { ticks: { font: { size: 9, family: 'Kanit' } } } } }
+            });
+        }
+
+        function renderDetailChart(categoriesObj) {
+            const ctx = document.getElementById('shopCategoryChart').getContext('2d');
+            if (AppState.charts.detail) AppState.charts.detail.destroy();
             
-            btn.disabled = true;
-            btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> กำลังวิเคราะห์...`;
-            output.classList.remove('hidden');
-            output.innerHTML = `🤖 ระบบกำลังประมวลผลข้อมูลของ ${entity.name}...`;
+            const cats = categoriesObj || {};
+            const labels = Object.keys(cats);
+            const values = Object.values(cats);
 
-            const prompt = `วิเคราะห์กลุ่มเป้าหมายวัสดุก่อสร้าง จ.เชียงใหม่:
-ชื่อ: ${entity.name}
-ประเภท: ${entity.type}
-สถานะ: ${entity.status === 'CUSTOMER' ? 'ลูกค้าปัจจุบัน' : 'Prospect (เป้าหมายใหม่)'}
-อำเภอ: ${entity.district}
-ยอดขายสะสมที่เคยซื้อกับเรา: ${entity.sales} บาท
-หมวดสินค้าที่ซื้อ: ${JSON.stringify(entity.categories)}
+            if (labels.length === 0) {
+                AppState.charts.detail = new Chart(ctx, {
+                    type: 'doughnut', data: { labels: ['ไม่มีประวัติยอดขาย'], datasets: [{ data: [1], backgroundColor: ['#e2e8f0'] }] }, options: { responsive: true, maintainAspectRatio: false }
+                });
+                return;
+            }
 
-คำสั่ง:
-1. หากเป็นลูกค้า: แนะนำกลยุทธ์ Cross-sell/Upsell สินค้าหมวดอื่นๆ
-2. หากเป็น Prospect: แนะนำวิธีเจาะตลาด (Ice breaking) สำหรับ ${entity.type}
-ตอบเป็นข้อๆ สั้นๆ ภาษาไทย เชิงธุรกิจและปฏิบัติได้จริง`;
+            AppState.charts.detail = new Chart(ctx, {
+                type: 'pie',
+                data: { labels: labels, datasets: [{ data: values, backgroundColor: ['#2563eb', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4'] }] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { font: { size: 9, family: 'Kanit' } } } } }
+            });
+        }
 
+        // --- STREAMING_CHUNK: การเชื่อมต่อ Gemini AI ---
+        async function callGeminiApi(prompt, systemInstruction) {
+            if (GEMINI_API_KEY === 'YOUR_GEMINI_API_KEY') {
+                return "กรุณาใส่ API Key ของ Gemini ใน Source code (ตัวแปร GEMINI_API_KEY) เพื่อใช้งานฟีเจอร์นี้ครับ";
+            }
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${GEMINI_API_KEY}`;
             try {
-                // ใช้ Gemini 3 Flash Preview
-                const apiKey = ""; // Canvas จะทำการ inject Key ให้
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
-
                 const response = await fetch(apiUrl, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         contents: [{ parts: [{ text: prompt }] }],
-                        systemInstruction: { parts: [{ text: "คุณคือ Sales Director ที่เก่งเรื่องจิตวิทยาการขายและข้อมูลเชิงลึก ตอบกระชับที่สุด" }] }
+                        systemInstruction: { parts: [{ text: systemInstruction }] }
                     })
                 });
-
                 const data = await response.json();
-                if (data.candidates && data.candidates[0].content) {
-                    output.innerText = data.candidates[0].content.parts[0].text;
-                } else {
-                    throw new Error("Invalid API Response");
-                }
-            } catch (error) {
-                console.error("AI Error: ", error);
-                output.innerText = "⚠️ ไม่สามารถเชื่อมต่อกับ AI ได้ในขณะนี้ โปรดตรวจสอบการเชื่อมต่อหรือ API Key";
-            } finally {
-                btn.disabled = false;
-                btn.innerHTML = `<i class="fa-solid fa-robot"></i> <span>วิเคราะห์</span>`;
+                return data?.candidates?.[0]?.content?.parts?.[0]?.text || "AI ไม่สามารถประมวลผลได้ในขณะนี้";
+            } catch (err) {
+                console.error("Gemini Error:", err);
+                return "เกิดข้อผิดพลาดในการเชื่อมต่อกับ AI Server.";
             }
         }
 
-        async function generateOverallStrategy() {
-            const btn = document.getElementById('btnGenerateStrategy');
-            const output = document.getElementById('aiStrategyOutput');
-            const data = getFilteredData();
-
-            if (data.length === 0) {
-                alertMsg("ไม่มีข้อมูลสำหรับวิเคราะห์");
-                return;
-            }
-
-            btn.disabled = true;
-            btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> กำลังสร้างกลยุทธ์ระดับจังหวัด...`;
-            output.classList.remove('hidden');
-            output.innerText = "🤖 ระบบกำลังรวบรวมข้อมูลทั้งหมดให้ AI ประมวลผล...";
-
-            const totalSales = data.reduce((sum, d) => sum + d.sales, 0);
+        async function runAiShopAnalysis() {
+            if (!AppState.activeEntityId) return;
+            const target = AppState.entities.find(e => String(e.id) === AppState.activeEntityId);
+            const btn = document.getElementById('btnAiAnalyzeShop');
+            const box = document.getElementById('aiShopResult');
             
-            const prompt = `วางแผนกลยุทธ์การขายวัสดุก่อสร้างเชียงใหม่ภาพรวม:
-- ข้อมูลปัจจุบันที่ฟิลเตอร์มา: ${data.length} เป้าหมาย (ประกอบด้วย ค้าช่วง, ผู้รับเหมา, โครงการ)
-- ยอดขายรวมในระบบ: ฿${totalSales.toLocaleString()} บาท
-- จากมูลค่าตลาดรวมเชียงใหม่ 12,500 ล้านบาท
+            btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+            box.classList.remove('hidden'); box.innerText = 'กำลังให้ Gemini ประมวลผล...';
 
-โปรดวิเคราะห์และสรุป:
-1. ภาพรวมศักยภาพที่เรามีตอนนี้
-2. โฟกัส (Priority) ในการลงพื้นที่ควรเน้นกลุ่มไหน (อ้างอิงจากข้อมูลด้านบน)
-3. กลยุทธ์การทำตลาด (Marketing & Sales Action Plan) 3 ข้อสำหรับทีมเซลส์`;
-
-            try {
-                const apiKey = "";
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
-
-                const response = await fetch(apiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        contents: [{ parts: [{ text: prompt }] }]
-                    })
-                });
-
-                const apiData = await response.json();
-                if (apiData.candidates && apiData.candidates[0].content) {
-                    output.innerText = apiData.candidates[0].content.parts[0].text;
-                } else {
-                    throw new Error("Invalid API Response");
-                }
-            } catch (error) {
-                output.innerText = "⚠️ พบปัญหาในการสร้างแผนกลยุทธ์ โปรดลองอีกครั้ง";
-            } finally {
-                btn.disabled = false;
-                btn.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles"></i> <span>ประมวลผลข้อมูลสร้างกลยุทธ์</span>`;
-            }
+            const prompt = `วิเคราะห์เป้าหมายชื่อ: ${target.name}
+ประเภท: ${target.type} | สถานะ: ${target.status}
+อำเภอ: ${target.district} | ยอดขาย: ฿${target.sales}
+สัดส่วนสินค้า: ${JSON.stringify(target.categories)}
+คำสั่ง: ขอ 3 ข้อสั้นๆ 1. จุดแข็ง 2. สินค้าที่ควร Upsell 3. วิธีเข้าหา (Action plan)`;
+            
+            const result = await callGeminiApi(prompt, "คุณคือ AI ผู้ช่วยผู้จัดการฝ่ายขายวัสดุก่อสร้าง ตอบสั้นๆ ตรงประเด็น");
+            box.innerText = result;
+            btn.disabled = false; btn.innerHTML = 'เริ่มวิเคราะห์';
         }
 
-        // --- STREAMING_CHUNK: ฟังก์ชัน UI Helpers ทั่วไป ---
+        async function generateProvincialStrategy() {
+            const btn = document.getElementById('btnGenerateStrategy');
+            const box = document.getElementById('provincialAiOutput');
+            
+            btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+            box.classList.remove('hidden'); box.innerText = 'วิเคราะห์ภาพรวมระดับจังหวัด...';
+
+            let total=0;
+            const distMap = {};
+            AppState.entities.forEach(e => {
+                total += parseFloat(e.sales)||0;
+                distMap[e.district] = (distMap[e.district]||0) + (parseFloat(e.sales)||0);
+            });
+
+            const prompt = `ข้อมูลตลาดวัสดุก่อสร้างปัจจุบัน (เชียงใหม่):
+ยอดขายรวมระบบ: ฿${total}
+ยอดแยกตามอำเภอ: ${JSON.stringify(distMap)}
+คำสั่ง: ช่วยร่างกลยุทธ์ 3 ข้อสั้นๆ ว่าควรบุกอำเภอไหนเพิ่ม และใช้โปรโมชั่นแบบไหนเจาะตลาด`;
+
+            const result = await callGeminiApi(prompt, "คุณคือ ผู้อำนวยการฝ่ายขายประจำภาคเหนือ ตอบแบบมีวิสัยทัศน์ สั้นและชัดเจน");
+            box.innerText = result;
+            btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles mr-1"></i> ประมวลผลแผนระดับจังหวัด';
+        }
+
         function switchTab(tab) {
             ['list', 'detail', 'chart', 'ai'].forEach(t => {
-                document.getElementById(`tabBtn${capitalize(t)}`).className = "flex-1 min-w-max py-3 px-3 text-xs font-semibold border-b-2 border-transparent text-slate-500 hover:text-slate-800 flex items-center justify-center gap-1.5 transition";
-                document.getElementById(`tab${capitalize(t)}`).classList.add('hidden');
+                document.getElementById(`tabBtn${capitalize(t)}`).className = (t === tab) 
+                    ? "flex-1 py-3 text-xs font-semibold border-b-2 border-blue-600 text-blue-600 transition"
+                    : "flex-1 py-3 text-xs font-semibold border-b-2 border-transparent text-slate-500 hover:text-slate-800 transition";
+                
+                const content = document.getElementById(`tab${capitalize(t)}`);
+                if (t === tab) content.classList.remove('hidden');
+                else content.classList.add('hidden');
             });
-            document.getElementById(`tabBtn${capitalize(tab)}`).className = "flex-1 min-w-max py-3 px-3 text-xs font-semibold border-b-2 border-brand-600 text-brand-600 flex items-center justify-center gap-1.5 transition";
-            document.getElementById(`tab${capitalize(tab)}`).classList.remove('hidden');
         }
-
         function capitalize(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
-
-        function toggleMapLegend() {
-            const body = document.getElementById('legendBody');
-            const chev = document.getElementById('legendChevron');
-            if(body.classList.contains('hidden')) {
-                body.classList.remove('hidden'); chev.className = 'fa-solid fa-chevron-down';
-            } else {
-                body.classList.add('hidden'); chev.className = 'fa-solid fa-chevron-up';
-            }
-        }
-
-        function alertMsg(msg) {
-            // สร้าง Custom Toast แทน alert()
-            const toast = document.createElement('div');
-            toast.className = 'fixed bottom-4 left-1/2 transform -translate-x-1/2 bg-slate-800 text-white px-4 py-2 rounded-lg text-sm shadow-xl z-[9999] opacity-0 transition-opacity duration-300';
-            toast.innerText = msg;
-            document.body.appendChild(toast);
-            
-            // Trigger animation
-            setTimeout(() => toast.classList.remove('opacity-0'), 10);
-            setTimeout(() => {
-                toast.classList.add('opacity-0');
-                setTimeout(() => toast.remove(), 300);
-            }, 3000);
-        }
 
     </script>
 </body>
