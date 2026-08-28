@@ -18,6 +18,10 @@
     
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- ดึงไลบรารี LINE LIFF SDK มาใช้งาน -->
+    <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+
     <style> body { font-family: 'Kanit', sans-serif; } </style>
 </head>
 <body class="h-full text-slate-800 flex items-center justify-center p-4 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] bg-slate-100">
@@ -61,10 +65,34 @@
     </div>
 
     <script>
-        // ฟังก์ชันสร้าง Toast Message ที่สวยงาม
-        function alertMsg(msg) {
+        // ==========================================
+        // การตั้งค่า LINE LIFF
+        // ==========================================
+        // TODO: นำ LIFF ID ที่ได้จาก LINE Developers Console มาใส่ตรงนี้
+        const LIFF_ID = "YOUR_LIFF_ID_HERE"; 
+
+        // เริ่มต้นกระบวนการเมื่อโหลดหน้าเว็บเสร็จ
+        window.onload = async function() {
+            // ตรวจสอบว่าเคยล็อกอินค้างไว้หรือไม่
+            const savedRole = localStorage.getItem('userRole');
+            if (savedRole === 'admin') goToPage('index.html');
+            if (savedRole === 'sales') goToPage('add_store.html');
+
+            // เริ่มต้นระบบ LIFF
+            if (LIFF_ID !== "YOUR_LIFF_ID_HERE") {
+                try {
+                    await liff.init({ liffId: LIFF_ID });
+                } catch (err) {
+                    console.error('LIFF Init Error:', err);
+                }
+            }
+        }
+
+        // ฟังก์ชันสร้าง Toast Message
+        function alertMsg(msg, isSuccess = true) {
             const toast = document.createElement('div');
-            toast.className = 'fixed top-10 left-1/2 transform -translate-x-1/2 bg-slate-800/95 backdrop-blur text-white px-5 py-3 rounded-xl text-sm shadow-2xl z-[9999] opacity-0 transition-all duration-300 text-center min-w-[280px] leading-relaxed';
+            const bgColor = isSuccess ? 'bg-slate-800/95' : 'bg-rose-600/95';
+            toast.className = `fixed top-10 left-1/2 transform -translate-x-1/2 ${bgColor} backdrop-blur text-white px-5 py-3 rounded-xl text-sm shadow-2xl z-[9999] opacity-0 transition-all duration-300 text-center min-w-[280px] leading-relaxed`;
             toast.innerHTML = msg; 
             document.body.appendChild(toast);
             
@@ -75,32 +103,60 @@
             }, 3500);
         }
 
-        // ฟังก์ชันช่วยเปลี่ยนหน้า (ป้องกัน Error ในโหมด Preview)
+        // ฟังก์ชันช่วยเปลี่ยนหน้า
         function goToPage(page) {
             if (window.location.protocol === 'blob:') {
-                alertMsg('⚠️ <b>แจ้งเตือนจากโหมด Preview:</b><br>ในหน้าต่างพรีวิวนี้ไม่สามารถเปลี่ยนหน้าเว็บได้<br>ระบบจริงจะพาไปที่ <b>' + page + '</b> อัตโนมัติ');
+                alertMsg('⚠️ <b>แจ้งเตือนจากโหมด Preview:</b><br>ระบบจริงจะพาไปที่ <b>' + page + '</b>');
             } else {
                 window.location.href = page;
             }
         }
 
-        // ตรวจสอบว่าเคยล็อกอินค้างไว้หรือไม่
-        window.onload = function() {
-            const savedRole = localStorage.getItem('userRole');
-            if (savedRole === 'admin') goToPage('index.html');
-            if (savedRole === 'sales') goToPage('add_store.html');
+        // ฟังก์ชันล็อกอินผ่าน LINE
+        async function login(role) {
+            // 1. ถ้ายังไม่ได้ใส่ LIFF ID หรืออยู่ในโหมดทดสอบ ให้จำลองการดึง UID เพื่อให้คุณทำงานต่อได้
+            if (window.location.protocol === 'blob:' || LIFF_ID === "YOUR_LIFF_ID_HERE") {
+                alertMsg('⚠️ <b>โหมดทดสอบ/ขาด LIFF ID:</b><br>จำลองการดึง UID ของ LINE สำเร็จ');
+                proceedLogin(role, 'MOCK_UID_1234567890', 'ทดสอบผู้ใช้งาน');
+                return;
+            }
+
+            // 2. กระบวนการล็อกอินผ่าน LINE ของจริง
+            try {
+                if (!liff.isLoggedIn()) {
+                    // ถ้ายังไม่ได้ล็อกอิน ให้เด้งไปหน้าล็อกอินของ LINE
+                    // พอเสร็จแล้วจะกลับมาที่หน้าเว็บนี้อัตโนมัติ
+                    liff.login({ redirectUri: window.location.href }); 
+                } else {
+                    // ถ้าล็อกอินแล้ว ดึงข้อมูลโปรไฟล์ได้เลย
+                    const profile = await liff.getProfile();
+                    const uid = profile.userId;
+                    const displayName = profile.displayName;
+                    // const pictureUrl = profile.pictureUrl; // ไว้ดึงรูปโปรไฟล์มาแสดงทีหลังได้
+
+                    alertMsg(`✅ เข้าสู่ระบบสำเร็จ!<br>ยินดีต้อนรับคุณ <b>${displayName}</b>`);
+                    
+                    // บันทึก UID แล้วเข้าสู่ระบบ
+                    proceedLogin(role, uid, displayName);
+                }
+            } catch (error) {
+                console.error('LINE Login Error:', error);
+                alertMsg('❌ เกิดข้อผิดพลาดในการเชื่อมต่อกับ LINE', false);
+            }
         }
 
-        function login(role) {
-            // บันทึกสถานะการล็อกอินลงในเครื่อง
+        // ฟังก์ชันบันทึกข้อมูลและเปลี่ยนหน้า
+        function proceedLogin(role, uid, displayName) {
+            // บันทึกข้อมูลลงเบราว์เซอร์
             localStorage.setItem('userRole', role);
+            localStorage.setItem('lineUid', uid);
+            localStorage.setItem('lineName', displayName);
             
-            // เปลี่ยนหน้าไปยังหน้าที่เหมาะสมกับสิทธิ์
-            if (role === 'admin') {
-                goToPage('index.html');
-            } else {
-                goToPage('add_store.html');
-            }
+            // เปลี่ยนหน้า (หน่วงเวลา 1.5 วิ ให้แสดงข้อความต้อนรับจบก่อน)
+            setTimeout(() => {
+                if (role === 'admin') goToPage('index.html');
+                else goToPage('add_store.html');
+            }, 1500);
         }
 
         // ฟังก์ชันสำหรับปุ่มลงทะเบียน
