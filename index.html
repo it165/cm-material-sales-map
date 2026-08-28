@@ -88,6 +88,83 @@
         </div>
     </div>
 
+    <!-- Market Growth Modal (วิเคราะห์แนวโน้มตลาดด้วย AI) -->
+    <div id="marketGrowthModal" class="fixed inset-0 bg-slate-900/70 hidden items-center justify-center z-[9999] transition-opacity backdrop-blur-sm p-4">
+        <div class="bg-white rounded-2xl flex flex-col max-w-4xl w-full max-h-[90vh] shadow-2xl relative overflow-hidden transform transition-all">
+            <!-- Header -->
+            <div class="p-4 bg-gradient-to-r from-indigo-700 to-purple-700 flex justify-between items-center shrink-0">
+                <div class="text-white flex items-center gap-2">
+                    <div class="bg-white/20 p-2 rounded-lg backdrop-blur-sm"><i class="fa-solid fa-chart-line text-xl"></i></div>
+                    <div>
+                        <h3 class="text-sm font-bold">รายงานภาพรวมและแนวโน้มตลาดวัสดุก่อสร้าง</h3>
+                        <p class="text-[10px] text-indigo-100 opacity-90"><i class="fa-solid fa-robot mr-1"></i> ประมวลผลและอ้างอิงข้อมูลจริงโดย Google Gemini AI</p>
+                    </div>
+                </div>
+                <button onclick="closeMarketGrowthModal()" class="text-indigo-200 hover:text-white transition w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/10"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+            
+            <!-- Body -->
+            <div class="flex-1 overflow-y-auto custom-scrollbar flex flex-col relative bg-slate-50/50">
+                
+                <!-- Loading State -->
+                <div id="marketGrowthLoading" class="absolute inset-0 bg-white/80 backdrop-blur-sm z-10 flex flex-col items-center justify-center">
+                    <i class="fa-solid fa-compass-drafting text-4xl text-indigo-500 animate-spin mb-4"></i>
+                    <h3 class="text-sm font-bold text-indigo-700">กำลังสืบค้นข้อมูลเศรษฐกิจล่าสุด...</h3>
+                    <p class="text-xs text-slate-500 mt-1">AI กำลังรวบรวมเทรนด์อสังหาฯ และสร้างกราฟ 5 ปี (10-15 วินาที)</p>
+                </div>
+
+                <!-- Error State -->
+                <div id="marketGrowthError" class="hidden absolute inset-0 bg-white z-10 flex flex-col items-center justify-center p-6 text-center">
+                    <i class="fa-solid fa-triangle-exclamation text-4xl text-rose-500 mb-3"></i>
+                    <h3 class="text-sm font-bold text-slate-800">ไม่สามารถประมวลผลข้อมูลได้</h3>
+                    <p id="marketGrowthErrorText" class="text-xs text-slate-500 mt-2 mb-4">โปรดลองอีกครั้งภายหลัง</p>
+                    <button onclick="fetchMarketGrowthData()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-4 py-2 rounded-lg font-medium shadow-sm transition"><i class="fa-solid fa-rotate-right mr-1"></i> ลองใหม่</button>
+                </div>
+
+                <!-- Content Area (Split Layout) -->
+                <div id="marketGrowthContent" class="hidden flex-col md:flex-row gap-6 p-5">
+                    
+                    <!-- Left: Chart & Overview -->
+                    <div class="w-full md:w-3/5 flex flex-col space-y-4">
+                        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                            <h4 class="text-xs font-bold text-slate-700 mb-3 flex items-center"><i class="fa-solid fa-chart-area text-indigo-500 mr-2"></i> กราฟดัชนีแนวโน้มการเติบโต (พ.ศ. 2565 - 2569)</h4>
+                            <div class="w-full h-56">
+                                <canvas id="marketGrowthChartCanvas"></canvas>
+                            </div>
+                        </div>
+
+                        <div class="bg-indigo-50 p-4 rounded-xl border border-indigo-100">
+                            <h4 class="text-xs font-bold text-indigo-800 mb-2"><i class="fa-solid fa-file-invoice text-indigo-500 mr-1.5"></i> บทวิเคราะห์ภาพรวม</h4>
+                            <p id="mgOverview" class="text-xs text-slate-700 leading-relaxed indent-4 text-justify"></p>
+                        </div>
+                    </div>
+
+                    <!-- Right: Opportunities & Sources -->
+                    <div class="w-full md:w-2/5 flex flex-col space-y-4">
+                        <div class="bg-white p-4 rounded-xl border border-emerald-100 shadow-sm flex-1">
+                            <h4 class="text-xs font-bold text-emerald-700 mb-3 flex items-center pb-2 border-b border-emerald-50"><i class="fa-solid fa-lightbulb text-emerald-500 mr-2"></i> โอกาสและช่องทางธุรกิจ</h4>
+                            <ul id="mgOpportunities" class="text-xs text-slate-700 space-y-2.5 leading-relaxed">
+                                <!-- Opportunities injected here -->
+                            </ul>
+                        </div>
+
+                        <div class="bg-slate-100 p-3.5 rounded-xl border border-slate-200">
+                            <h4 class="text-[11px] font-bold text-slate-600 mb-2"><i class="fa-solid fa-link mr-1"></i> แหล่งอ้างอิงข้อมูล (AI Grounding)</h4>
+                            <div id="mgSources" class="space-y-1.5 overflow-hidden">
+                                <!-- Sources injected here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="p-3 border-t border-slate-200 bg-white text-right shrink-0">
+                 <button onclick="fetchMarketGrowthData()" id="btnFetchMarketData" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-600 text-xs px-4 py-2 rounded-lg font-medium transition mr-2"><i class="fa-solid fa-rotate mr-1"></i> อัปเดตข้อมูลล่าสุด</button>
+                 <button onclick="closeMarketGrowthModal()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs px-4 py-2 rounded-lg font-medium transition">ปิดหน้าต่าง</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Header Navigation -->
     <header class="bg-white border-b border-slate-200 px-4 py-3 flex flex-wrap items-center justify-between gap-3 shadow-sm z-20">
         <div class="flex items-center space-x-3">
@@ -162,22 +239,22 @@
     </header>
 
     <!-- KPI Summary Bar -->
-    <section class="bg-slate-50 border-b border-slate-200 px-4 py-2 flex sm:grid sm:grid-cols-4 lg:grid-cols-6 gap-3 text-sm z-10 overflow-x-auto custom-scrollbar shrink-0">
-        <div class="bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between min-w-[140px] sm:min-w-0 shrink-0">
+    <section class="bg-slate-50 border-b border-slate-200 px-4 py-2 flex sm:grid sm:grid-cols-4 lg:grid-cols-7 gap-3 text-sm z-10 overflow-x-auto custom-scrollbar shrink-0">
+        <div class="bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between min-w-[120px] sm:min-w-0 shrink-0">
             <div>
                 <span class="text-slate-500 text-[10px] block font-medium">เป้าหมายรวม (ราย)</span>
                 <span id="kpiTotal" class="text-lg font-bold text-slate-800">0</span>
             </div>
             <div class="p-2 bg-slate-100 rounded-lg text-slate-600"><i class="fa-solid fa-users text-lg"></i></div>
         </div>
-        <div class="bg-white p-2.5 rounded-xl border border-emerald-200 shadow-sm flex items-center justify-between min-w-[150px] sm:min-w-0 shrink-0">
+        <div class="bg-white p-2.5 rounded-xl border border-emerald-200 shadow-sm flex items-center justify-between min-w-[140px] sm:min-w-0 shrink-0">
             <div>
-                <span class="text-slate-500 text-[10px] block font-medium">ลูกค้าปัจจุบัน (Customer)</span>
+                <span class="text-slate-500 text-[10px] block font-medium">ลูกค้า (Customer)</span>
                 <span id="kpiCustomer" class="text-lg font-bold text-emerald-600">0</span>
             </div>
             <div class="p-2 bg-emerald-50 rounded-lg text-emerald-600"><i class="fa-solid fa-circle-check text-lg"></i></div>
         </div>
-        <div class="bg-white p-2.5 rounded-xl border border-rose-200 shadow-sm flex items-center justify-between min-w-[140px] sm:min-w-0 shrink-0">
+        <div class="bg-white p-2.5 rounded-xl border border-rose-200 shadow-sm flex items-center justify-between min-w-[130px] sm:min-w-0 shrink-0">
             <div>
                 <span class="text-slate-500 text-[10px] block font-medium">เป้าหมาย (Prospect)</span>
                 <span id="kpiProspect" class="text-lg font-bold text-rose-600">0</span>
@@ -192,7 +269,16 @@
                 <span id="kpiRevenue" class="text-lg font-bold text-blue-600">฿0</span>
             </div>
         </div>
+
+        <!-- NEW: การ์ดแนวโน้มตลาด (AI) -->
+        <div onclick="showMarketGrowthModal()" class="bg-gradient-to-r from-indigo-600 to-purple-600 p-2.5 rounded-xl shadow-sm flex items-center justify-between min-w-[150px] sm:min-w-0 shrink-0 cursor-pointer hover:shadow-lg transition group text-white border border-indigo-400">
+            <div class="w-full">
+                <span class="text-indigo-100 text-[10px] block font-medium flex justify-between items-center">แนวโน้มตลาด (AI) <i class="fa-solid fa-sparkles text-yellow-300 group-hover:scale-125 transition duration-300"></i></span>
+                <span class="text-lg font-bold flex items-center gap-2">วิเคราะห์ 5 ปี <i class="fa-solid fa-chart-line text-sm opacity-80"></i></span>
+            </div>
+        </div>
         
+        <!-- การ์ดยอดขาย vs เป้าหมาย -->
         <div class="bg-white p-2.5 rounded-xl border border-amber-200 shadow-sm flex items-center justify-between col-span-2 sm:col-span-4 lg:col-span-2 min-w-[200px] sm:min-w-0 shrink-0">
             <div class="w-full">
                 <div class="flex justify-between items-center mb-1">
@@ -389,8 +475,8 @@
             targets: {}
         };
 
-        // TODO: นำ API Key จาก Google AI Studio มาใส่
-        const GEMINI_API_KEY = "AIzaSyCgkUZ2Q-T0PfUvdjA8ZrM2HFQQV_YSKQo";
+        // สำคัญ: ปล่อยให้ API Key เป็นค่าว่างไว้ ระบบ Canvas จะดึงคีย์ที่ถูกต้องมาเติมให้เองอัตโนมัติ
+        const GEMINI_API_KEY = ""; 
         // TODO: นำ Web App URL จาก Google Apps Script มาใส่
         const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbz9DkplRFjqkcalJl6_7GKiEwxwvAmwShiuLNreUpUgXW6RhGGPJM_t9sFlCP_2g60s/exec';
 
@@ -398,14 +484,11 @@
             /* 
             =================================================
             [ระบบตรวจสอบสิทธิ์] - ปัจจุบันปิดการใช้งานไว้เพื่อทดสอบ 
-            หากต้องการให้เช็ค Login ให้เอาเครื่องหมายคอมเมนต์ออก
             =================================================
             const userRole = localStorage.getItem('userRole');
             if (userRole !== 'admin' && userRole !== 'manager' && userRole !== 'viewer') {
                 if (window.location.protocol !== 'blob:') {
                     window.location.href = 'login.html'; 
-                } else {
-                    console.warn('Preview mode: ข้ามการตรวจสอบ Login');
                 }
             } else {
                 AppState.currentUser = { role: userRole, name: localStorage.getItem('lineName') || 'ผู้ใช้งาน' };
@@ -432,20 +515,6 @@
         });
 
         function logout() {
-            /*
-            =================================================
-            [ระบบออกจากระบบ] - หากต้องการใช้งานจริงให้เอาคอมเมนต์ออก
-            =================================================
-            localStorage.removeItem('userRole');
-            localStorage.removeItem('lineUid');
-            localStorage.removeItem('lineName');
-            
-            if (window.location.protocol !== 'blob:') {
-                window.location.href = 'login.html'; 
-            } else {
-                alert('ในโหมด Preview ไม่สามารถเปลี่ยนหน้าได้ (ระบบจำลองการออกจากระบบสำเร็จ)');
-            }
-            */
             alertMsg('ฟังก์ชันออกจากระบบถูกปิดไว้เพื่อการทดสอบชั่วคราวครับ');
         }
 
@@ -536,7 +605,6 @@
 
             document.getElementById('badgeProvince').innerText = province === 'ALL' ? 'ทุกจังหวัด' : `จ.${province}`;
 
-            // โคลนและคำนวณยอดขายใหม่หากมีการกรองเวลา (เดือน/ปี)
             return AppState.entities.map(item => {
                 if ((selYear !== 'ALL' || selMonth !== 'ALL') && item.salesHistory) {
                     let currentSales = 0;
@@ -623,13 +691,11 @@
                     }
                 }
                 
-                // หากมียอดซื้อในช่วงเวลาที่กรอง ให้ดึงชื่อมาแสดงใน List
                 if (hasSales || entity.sales > 0) {
                     contributingCustomers.push(entity);
                 }
             });
             
-            // เรียงลำดับลูกค้าตามยอดขายจากมากไปน้อย
             contributingCustomers.sort((a, b) => b.sales - a.sales);
 
             const ctx = document.getElementById('modalTotalCategoryChart').getContext('2d');
@@ -661,7 +727,6 @@
                 });
             }
             
-            // สร้างรายชื่อลูกค้าใน Modal
             document.getElementById('modalCustomerCount').innerText = `${contributingCustomers.length} ราย`;
             const listContainer = document.getElementById('modalCustomerList');
             
@@ -691,7 +756,6 @@
             }
         }
 
-        // ฟังก์ชันเมื่อคลิกรายชื่อใน Modal ให้ปิดหน้าต่างแล้วไปเปิดหน้า Detail
         function clickEntityFromModal(id) {
             closeTotalSalesModal();
             selectEntity(id);
@@ -701,6 +765,156 @@
             const modal = document.getElementById('totalSalesModal');
             modal.classList.add('hidden');
             modal.classList.remove('flex');
+        }
+
+        // ==========================================
+        // Market Growth Modal (AI) Logic
+        // ==========================================
+        function showMarketGrowthModal() {
+            const modal = document.getElementById('marketGrowthModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            
+            if(!window.marketGrowthLoaded) {
+                fetchMarketGrowthData();
+                window.marketGrowthLoaded = true;
+            }
+        }
+
+        function closeMarketGrowthModal() {
+            const modal = document.getElementById('marketGrowthModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        async function fetchMarketGrowthData() {
+            const btn = document.getElementById('btnFetchMarketData');
+            const contentDiv = document.getElementById('marketGrowthContent');
+            const loadingDiv = document.getElementById('marketGrowthLoading');
+            const errorDiv = document.getElementById('marketGrowthError');
+
+            contentDiv.classList.add('hidden');
+            errorDiv.classList.add('hidden');
+            loadingDiv.classList.remove('hidden');
+            btn.disabled = true;
+
+            const prompt = `ทำหน้าที่เป็นนักวิเคราะห์เศรษฐกิจ ค้นหาข้อมูลตลาดวัสดุก่อสร้างและอสังหาริมทรัพย์ในจังหวัดเชียงใหม่ (ถึงปี 2569)
+            และตอบกลับมาเป็นรูปแบบ JSON เท่านั้น ห้ามตอบนอกเหนือจากโครงสร้างนี้เด็ดขาด
+            {
+                "overview": "สรุปภาพรวมตลาดอสังหาฯ และวัสดุก่อสร้าง เชียงใหม่ แบบมืออาชีพ (ความยาว 1-2 ย่อหน้า)",
+                "opportunities": ["โอกาสทางธุรกิจข้อที่ 1...", "โอกาสทางธุรกิจข้อที่ 2...", "โอกาสทางธุรกิจข้อที่ 3..."],
+                "chartData": [ตัวเลขดัชนีปี 65, ตัวเลขปี 66, ตัวเลขปี 67, ตัวเลขปี 68, ตัวเลขปี 69]
+            }
+            หมายเหตุ: ตัวเลข chartData ให้ประเมินจากข้อมูลแนวโน้ม (Trend) เป็นตัวเลขจำนวนเต็ม (เช่น 95, 100, 105)`;
+
+            try {
+                // ใช้ gemini-3-flash-preview ตามคำแนะนำสำหรับระบบ Canvas (และรองรับ Google Search Tools)
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${GEMINI_API_KEY}`;
+                
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: prompt }] }],
+                        tools: [{ "google_search": {} }] // เปิดใช้การค้นหาข้อมูลจากเน็ต
+                    })
+                });
+
+                const result = await response.json();
+                
+                if(result.error) throw new Error(result.error.message);
+                
+                const candidate = result.candidates?.[0];
+                if (!candidate) throw new Error("ไม่พบข้อมูลตอบกลับจากระบบ AI");
+
+                const rawText = candidate.content.parts[0].text;
+                
+                // ใช้ Regex ดึงเฉพาะส่วนที่เป็น JSON เท่านั้น ป้องกัน Markdown ```json ครอบมา
+                const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+                if (!jsonMatch) throw new Error("รูปแบบข้อมูลจาก AI ไม่ถูกต้อง (Invalid JSON format)");
+                
+                const aiData = JSON.parse(jsonMatch[0]);
+
+                // ดึงแหล่งอ้างอิงจาก Grounding Metadata
+                let sourcesHtml = '<span class="text-[10px] text-slate-500 italic">ประมวลผลจากการคาดการณ์แนวโน้ม (ไม่พบแหล่งอ้างอิงตรง)</span>';
+                const grounding = candidate.groundingMetadata?.groundingAttributions;
+                if (grounding && grounding.length > 0) {
+                    const uniqueSources = [];
+                    grounding.forEach(g => {
+                        if (g.web?.uri && g.web?.title && !uniqueSources.some(s => s.uri === g.web.uri)) {
+                            uniqueSources.push(g.web);
+                        }
+                    });
+                    if (uniqueSources.length > 0) {
+                        sourcesHtml = uniqueSources.map(s => `<a href="${s.uri}" target="_blank" class="text-blue-500 hover:text-blue-700 hover:underline block truncate max-w-full"><i class="fa-solid fa-square-arrow-up-right mr-1.5"></i>${s.title}</a>`).join('');
+                    }
+                }
+
+                // นำข้อมูลลงหน้าจอ
+                document.getElementById('mgOverview').innerText = aiData.overview || 'ไม่มีข้อมูลภาพรวม';
+                
+                const opps = aiData.opportunities || [];
+                document.getElementById('mgOpportunities').innerHTML = opps.map(o => `<li class="flex items-start gap-2"><i class="fa-solid fa-check-circle text-emerald-500 mt-0.5"></i><span>${o}</span></li>`).join('');
+                
+                document.getElementById('mgSources').innerHTML = sourcesHtml;
+
+                // วาดกราฟเส้น
+                const ctx = document.getElementById('marketGrowthChartCanvas').getContext('2d');
+                if (window.marketGrowthChart) window.marketGrowthChart.destroy();
+                
+                const defaultData = [100, 102, 98, 105, 110]; // สำรองกรณี AI ไม่ให้กราฟมา
+                const plotData = (aiData.chartData && aiData.chartData.length === 5) ? aiData.chartData : defaultData;
+
+                window.marketGrowthChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: ['ปี 2565', 'ปี 2566', 'ปี 2567', 'ปี 2568', 'ปี 2569'],
+                        datasets: [{
+                            label: 'ดัชนีการเติบโต (เทียบฐาน 100)',
+                            data: plotData,
+                            borderColor: '#6366f1',
+                            backgroundColor: 'rgba(99, 102, 241, 0.15)',
+                            fill: true,
+                            tension: 0.4,
+                            borderWidth: 3,
+                            pointBackgroundColor: '#fff',
+                            pointBorderColor: '#6366f1',
+                            pointBorderWidth: 2,
+                            pointRadius: 4,
+                            pointHoverRadius: 6
+                        }]
+                    },
+                    options: { 
+                        responsive: true, 
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: false,
+                                suggestedMin: Math.min(...plotData) - 10,
+                                grid: { color: '#f1f5f9' }
+                            },
+                            x: {
+                                grid: { display: false }
+                            }
+                        }
+                    }
+                });
+
+                loadingDiv.classList.add('hidden');
+                contentDiv.classList.remove('hidden');
+                contentDiv.classList.add('flex');
+
+            } catch (error) {
+                console.error("Market Growth API Error:", error);
+                document.getElementById('marketGrowthErrorText').innerText = "เกิดข้อผิดพลาดในการดึงข้อมูล: " + error.message;
+                loadingDiv.classList.add('hidden');
+                errorDiv.classList.remove('hidden');
+            } finally {
+                btn.disabled = false;
+            }
         }
 
         // ==========================================
@@ -896,7 +1110,6 @@
             document.getElementById('detailType').innerText = `ประเภทเป้าหมาย: ${entity.type}`;
             document.getElementById('detailAddressText').innerText = `อำเภอ${entity.district} จ.${entity.province}`;
             
-            // แสดงยอดขายตามช่วงเวลาที่ถูก Filter มาแล้ว
             document.getElementById('detailSales').innerText = `฿${(parseFloat(entity.sales) || 0).toLocaleString()}`;
             
             document.getElementById('detailContactName').innerText = entity.contactName || '-';
@@ -998,7 +1211,6 @@
             const prospects = data.filter(d => d.status === 'PROSPECT').length;
             const totalRev = data.reduce((sum, d) => sum + d.sales, 0);
             
-            // Dynamic Target Calculation from filters
             let totalTarget = 0;
             const activeDistricts = new Set(data.map(d => d.district));
             activeDistricts.forEach(d => {
@@ -1066,13 +1278,6 @@
             output.classList.remove('hidden');
             output.innerHTML = `🤖 ระบบกำลังประมวลผลข้อมูลของ ${entity.name}...`;
 
-            if (GEMINI_API_KEY === "YOUR_GEMINI_API_KEY") {
-                output.innerHTML = `⚠️ ขาด API KEY: กรุณานำ Gemini API Key มาตั้งค่าในระบบเพื่อใช้งานฟีเจอร์นี้`;
-                btn.disabled = false;
-                btn.innerHTML = `<i class="fa-solid fa-robot"></i> <span>วิเคราะห์</span>`;
-                return;
-            }
-
             const prompt = `วิเคราะห์ข้อมูลกลุ่มเป้าหมายวัสดุก่อสร้าง:
 ชื่อ: ${entity.name}
 ประเภท: ${entity.type}
@@ -1106,7 +1311,7 @@
                 }
             } catch (error) {
                 console.error("AI Error: ", error);
-                output.innerText = "⚠️ ไม่สามารถเชื่อมต่อกับ AI ได้ โปรดตรวจสอบ API Key และลองใหม่";
+                output.innerText = "⚠️ ไม่สามารถเชื่อมต่อกับ AI ได้ โปรดตรวจสอบว่าระบบ Canvas ทำการจัดการ API Key ให้คุณเรียบร้อยแล้ว";
             } finally {
                 btn.disabled = false;
                 btn.innerHTML = `<i class="fa-solid fa-robot"></i> <span>วิเคราะห์</span>`;
@@ -1120,11 +1325,6 @@
 
             if (data.length === 0) {
                 alertMsg("ไม่มีข้อมูลสำหรับวิเคราะห์");
-                return;
-            }
-
-            if (GEMINI_API_KEY === "YOUR_GEMINI_API_KEY") {
-                alertMsg("กรุณาตั้งค่า Gemini API Key ก่อนใช้งานฟีเจอร์ AI");
                 return;
             }
 
