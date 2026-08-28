@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="th" class="bg-slate-200 h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>บันทึกเป้าหมาย (Sales Territory)</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: { extend: { colors: { brand: { 50: '#eff6ff', 100: '#dbeafe', 500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8' } } } }
+        }
+    </script>
+    
+    <!-- Font Awesome & Google Font -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Dependencies for jquery.Thailand.js -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/earthchie/jquery.Thailand.js/jquery.Thailand.js/dependencies/JQL.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/earthchie/jquery.Thailand.js/jquery.Thailand.js/dependencies/typeahead.bundle.js"></script>
+    
+    <!-- jquery.Thailand.js -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/earthchie/jquery.Thailand.js/jquery.Thailand.js/dist/jquery.Thailand.min.css">
+    <script src="https://cdn.jsdelivr.net/gh/earthchie/jquery.Thailand.js/jquery.Thailand.js/dist/jquery.Thailand.min.js"></script>
+
+    <style>
+        body { font-family: 'Kanit', sans-serif; overflow: hidden; }
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        
+        /* Auto Complete Styles */
+        .tt-menu { background-color: white; border: 1px solid #e2e8f0; border-radius: 0.5rem; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); width: 100%; z-index: 100; margin-top: 2px;}
+        .tt-suggestion { padding: 8px 12px; font-size: 13px; cursor: pointer; border-bottom: 1px solid #f1f5f9; }
+        .tt-suggestion:hover { background-color: #eff6ff; color: #2563eb; }
+        .tt-suggestion:last-child { border-bottom: none; }
+        
+        /* Custom Scrollbar */
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    </style>
+</head>
+<body class="h-full text-slate-800 flex flex-col">
+
+    <!-- Header -->
+    <header class="bg-brand-600 text-white shadow-md z-50 shrink-0">
+        <div class="px-4 py-3 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <button onclick="window.close()" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-brand-700 transition">
+                    <i class="fa-solid fa-arrow-left"></i>
+                </button>
+                <div>
+                    <h1 class="font-bold text-lg leading-tight">ระบบลงพื้นที่</h1>
+                    <p class="text-[10px] text-brand-100 opacity-80">บันทึกและแก้ไขเป้าหมายการขาย</p>
+                </div>
+            </div>
+            <div class="hidden md:flex text-xs bg-brand-700 px-3 py-1.5 rounded-lg border border-brand-500">
+                <i class="fa-solid fa-desktop mr-1.5 mt-0.5"></i> Desktop Mode
+            </div>
+        </div>
+        
+        <!-- Mobile Tabs (แสดงเฉพาะบนจอเล็ก) -->
+        <div class="flex md:hidden bg-brand-700/50">
+            <button id="tabForm" onclick="switchMobileTab('form')" class="flex-1 py-2.5 text-sm font-semibold border-b-2 border-white text-white transition">
+                <i class="fa-solid fa-file-pen mr-1"></i> ฟอร์มข้อมูล
+            </button>
+            <button id="tabList" onclick="switchMobileTab('list')" class="flex-1 py-2.5 text-sm font-semibold border-b-2 border-transparent text-brand-200 hover:text-white transition">
+                <i class="fa-solid fa-database mr-1"></i> ฐานข้อมูล
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 flex overflow-hidden">
+        
+        <!-- ========================================== -->
+        <!-- LEFT PANEL: FORM (ฝั่งซ้าย: ฟอร์มกรอกข้อมูล)   -->
+        <!-- ========================================== -->
+        <div id="panelForm" class="w-full md:w-[400px] lg:w-[480px] shrink-0 bg-white flex flex-col h-full shadow-lg z-20 transition-all max-md:flex">
+            
+            <div id="formHeader" class="p-4 bg-slate-50 border-b border-slate-100 flex items-center justify-between transition-colors shrink-0">
+                <div class="flex items-center gap-2 text-sm font-semibold text-brand-600" id="formHeaderTitle">
+                    <i class="fa-solid fa-file-circle-plus text-lg"></i> <span>เพิ่มข้อมูลลูกค้าใหม่</span>
+                </div>
+                <button type="button" id="btnCancelEdit" onclick="cancelEdit()" class="hidden bg-white hover:bg-rose-50 text-rose-500 border border-rose-200 text-[10px] font-bold px-2.5 py-1 rounded-lg transition shadow-sm">
+                    <i class="fa-solid fa-xmark mr-1"></i> ยกเลิกการแก้ไข
+                </button>
+            </div>
+            
+            <!-- เปลี่ยนให้ฟอร์มครอบคลุมพื้นที่ทั้งหมด เพื่อล็อกปุ่มไว้ด้านล่าง -->
+            <form id="addDataForm" onsubmit="submitForm(event)" class="flex-1 flex flex-col overflow-hidden">
+                
+                <!-- ส่วนเนื้อหาฟอร์มที่สามารถเลื่อน (Scroll) ได้ -->
+                <div class="flex-1 overflow-y-auto custom-scrollbar p-5 space-y-4">
+                    <input type="hidden" id="editId" value="">
+                    
+                    <!-- ประเภทเป้าหมาย -->
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1.5">ประเภทเป้าหมาย <span class="text-rose-500">*</span></label>
+                        <div class="grid grid-cols-3 gap-2">
+                            <label class="cursor-pointer">
+                                <input type="radio" name="type" value="ค้าช่วง" class="peer sr-only" required checked onchange="filterData()">
+                                <div class="text-center py-2.5 px-1 rounded-xl border border-slate-200 text-slate-500 peer-checked:border-brand-500 peer-checked:bg-brand-50 peer-checked:text-brand-700 transition shadow-sm">
+                                    <i class="fa-solid fa-store block mb-1 text-lg"></i><span class="text-[10px] font-medium block">ค้าช่วง</span>
+                                </div>
+                            </label>
+                            <label class="cursor-pointer">
+                                <input type="radio" name="type" value="ผู้รับเหมา" class="peer sr-only" required onchange="filterData()">
+                                <div class="text-center py-2.5 px-1 rounded-xl border border-slate-200 text-slate-500 peer-checked:border-amber-500 peer-checked:bg-amber-50 peer-checked:text-amber-700 transition shadow-sm">
+                                    <i class="fa-solid fa-helmet-safety block mb-1 text-lg"></i><span class="text-[10px] font-medium block">ผู้รับเหมา</span>
+                                </div>
+                            </label>
+                            <label class="cursor-pointer">
+                                <input type="radio" name="type" value="โครงการ" class="peer sr-only" required onchange="filterData()">
+                                <div class="text-center py-2.5 px-1 rounded-xl border border-slate-200 text-slate-500 peer-checked:border-purple-500 peer-checked:bg-purple-50 peer-checked:text-purple-700 transition shadow-sm">
+                                    <i class="fa-solid fa-building block mb-1 text-lg"></i><span class="text-[10px] font-medium block">โครงการ</span>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- ข้อมูลเบื้องต้น -->
+                    <div class="space-y-3">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">ชื่อร้านค้า/บริษัท/โครงการ <span class="text-rose-500">*</span></label>
+                            <input type="text" id="storeName" required placeholder="เช่น ร้านเชียงดาววัสดุก่อสร้าง" class="w-full bg-slate-50 border border-slate-300 text-sm rounded-xl px-3 py-2.5 focus:outline-none focus:border-brand-500 focus:bg-white transition">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">ชื่อผู้ติดต่อ / เบอร์โทร</label>
+                            <input type="text" id="contactName" placeholder="เช่น คุณสมชาย 081-xxx-xxxx" class="w-full bg-slate-50 border border-slate-300 text-sm rounded-xl px-3 py-2.5 focus:outline-none focus:border-brand-500 focus:bg-white transition">
+                        </div>
+                    </div>
+
+                    <hr class="border-slate-100 my-2">
+
+                    <!-- ข้อมูลที่อยู่ (ใช้งาน Auto Complete) -->
+                    <div>
+                        <div class="flex items-center gap-2 mb-2">
+                            <i class="fa-solid fa-map-location-dot text-brand-500"></i>
+                            <span class="text-xs font-semibold text-slate-700">ที่ตั้ง (รองรับระบบค้นหาอัตโนมัติ)</span>
+                        </div>
+                        
+                        <div class="space-y-3 p-3 bg-slate-50 rounded-xl border border-slate-200">
+                            <div>
+                                <label class="block text-[10px] font-semibold text-slate-500 mb-1">รายละเอียดที่อยู่ (เลขที่, หมู่, ซอย, ถนน) <span class="text-rose-500">*</span></label>
+                                <input type="text" id="addressDetail" required placeholder="เช่น 37/2 หมู่ 2 ถ.ช้างเผือก" class="w-full bg-white border border-slate-300 text-sm rounded-lg px-3 py-2 focus:outline-none focus:border-brand-500 transition shadow-sm">
+                            </div>
+                            
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-[10px] font-semibold text-slate-500 mb-1">ตำบล/แขวง <span class="text-rose-500">*</span></label>
+                                    <input type="text" id="inputSubdistrict" required placeholder="พิมพ์ตำบล..." class="w-full bg-white border border-slate-300 text-sm rounded-lg px-3 py-2 focus:outline-none focus:border-brand-500 transition shadow-sm">
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] font-semibold text-slate-500 mb-1">อำเภอ/เขต <span class="text-rose-500">*</span></label>
+                                    <input type="text" id="inputDistrict" required placeholder="พิมพ์อำเภอ..." class="w-full bg-white border border-slate-300 text-sm rounded-lg px-3 py-2 focus:outline-none focus:border-brand-500 transition shadow-sm">
+                                </div>
+                            </div>
+                            
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-[10px] font-semibold text-slate-500 mb-1">จังหวัด <span class="text-rose-500">*</span></label>
+                                    <input type="text" id="inputProvince" required placeholder="พิมพ์จังหวัด..." class="w-full bg-white border border-slate-300 text-sm rounded-lg px-3 py-2 focus:outline-none focus:border-brand-500 transition shadow-sm">
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] font-semibold text-slate-500 mb-1">รหัสไปรษณีย์ <span class="text-rose-500">*</span></label>
+                                    <input type="text" id="inputZipcode" required placeholder="รหัสไปรษณีย์..." class="w-full bg-white border border-slate-300 text-sm rounded-lg px-3 py-2 focus:outline-none focus:border-brand-500 transition shadow-sm">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- พิกัด GPS -->
+                    <div>
+                        <div class="flex items-center justify-between mb-2 mt-4">
+                            <label class="block text-xs font-semibold text-slate-700">พิกัดแผนที่ (GPS) <span class="text-rose-500">*</span></label>
+                            <button type="button" onclick="getLocation()" id="btnGps" class="bg-indigo-100 hover:bg-indigo-200 text-indigo-700 text-[10px] font-bold py-1.5 px-3 rounded-lg transition flex items-center gap-1.5 shadow-sm border border-indigo-200">
+                                <i class="fa-solid fa-location-crosshairs"></i> ดึงพิกัดตอนนี้
+                            </button>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div class="relative">
+                                <span class="absolute left-3 top-2.5 text-[10px] text-slate-400 font-bold">Lat</span>
+                                <input type="number" step="any" id="lat" required placeholder="ละติจูด" class="w-full bg-slate-50 border border-slate-300 text-slate-700 text-sm rounded-xl pl-9 pr-2 py-2.5 focus:outline-none focus:border-brand-500 focus:bg-white transition shadow-inner">
+                            </div>
+                            <div class="relative">
+                                <span class="absolute left-3 top-2.5 text-[10px] text-slate-400 font-bold">Lng</span>
+                                <input type="number" step="any" id="lng" required placeholder="ลองจิจูด" class="w-full bg-slate-50 border border-slate-300 text-slate-700 text-sm rounded-xl pl-10 pr-2 py-2.5 focus:outline-none focus:border-brand-500 focus:bg-white transition shadow-inner">
+                            </div>
+                        </div>
+                        <p class="text-[9px] text-slate-400 mt-1.5 text-center"><i class="fa-solid fa-circle-info"></i> หากใช้ PC สามารถพิมพ์ตัวเลขได้เลย</p>
+                    </div>
+                </div>
+
+                <!-- Submit Button (ถูกล็อกติดพื้นด้านล่างเสมอ) -->
+                <div class="shrink-0 p-4 bg-white border-t border-slate-200 shadow-[0_-5px_15px_-3px_rgba(0,0,0,0.05)] z-40">
+                    <button type="submit" id="btnSubmit" class="w-full flex items-center justify-center gap-2 bg-brand-600 hover:bg-brand-700 text-white font-bold py-3 px-4 rounded-xl shadow-lg transition">
+                        <i class="fa-solid fa-cloud-arrow-up"></i>
+                        <span id="btnSubmitText">บันทึกข้อมูลใหม่</span>
+                    </button>
+                    <!-- แถบแสดงวันที่ -->
+                    <div class="text-center mt-2 text-[10px] text-slate-500 font-medium">
+                        <i class="fa-regular fa-calendar-check mr-1 text-slate-400"></i> บันทึกข้อมูลประจำวันที่ <span id="currentDateDisplay" class="text-brand-600 font-bold"></span>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <!-- ========================================== -->
+        <!-- RIGHT PANEL: LIST (ฝั่งขวา: ฐานข้อมูล/ค้นหา)   -->
+        <!-- ========================================== -->
+        <div id="panelList" class="flex-1 bg-slate-50 flex flex-col h-full border-l border-slate-300 max-md:hidden">
+            
+            <!-- Mini Dashboard: Sales vs Target (แสดงกราฟเป้าหมาย) -->
+            <div id="miniDashboardContainer" class="bg-white border-b border-slate-200 px-4 py-3 shrink-0 hidden shadow-sm z-10">
+                <div class="flex items-center justify-between mb-2">
+                    <h3 class="text-xs font-bold text-slate-700"><i class="fa-solid fa-chart-pie text-brand-500 mr-1.5"></i>ความคืบหน้าเป้าหมาย (รายอำเภอ)</h3>
+                </div>
+                <div id="miniDashboardContent" class="flex gap-3 overflow-x-auto custom-scrollbar pb-1">
+                    <!-- Progress cards will be injected here -->
+                </div>
+            </div>
+
+            <!-- Search Header -->
+            <div class="bg-white p-4 border-b border-slate-200 flex flex-col gap-3 shadow-sm z-10 shrink-0">
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                    <div>
+                        <h2 class="font-bold text-slate-800 text-base"><i class="fa-solid fa-database text-amber-500 mr-2"></i>ฐานข้อมูลเป้าหมาย</h2>
+                        <p class="text-[11px] text-slate-500">คลิกที่รายชื่อเพื่อแก้ไขข้อมูล</p>
+                    </div>
+                    
+                    <div class="relative w-full md:w-64">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-400 text-sm"></i>
+                        <input type="text" id="searchInput" oninput="filterData()" placeholder="ค้นหาชื่อ, รหัส, เบอร์โทร..." class="w-full bg-slate-50 border border-slate-300 text-sm rounded-xl pl-9 pr-3 py-2 focus:outline-none focus:border-amber-500 focus:bg-white transition shadow-inner">
+                    </div>
+                </div>
+                
+                <!-- Filters (จังหวัด / อำเภอ / ตำบล) -->
+                <div class="flex gap-2 overflow-x-auto custom-scrollbar pb-1">
+                    <select id="filterProvince" onchange="updateDistrictOptions(); filterData()" class="bg-slate-50 border border-slate-300 text-[11px] rounded-lg px-2 py-1.5 focus:outline-none focus:border-brand-500 min-w-[100px] text-slate-600">
+                        <option value="">ทุกจังหวัด</option>
+                    </select>
+                    <select id="filterDistrict" onchange="updateSubdistrictOptions(); filterData()" class="bg-slate-50 border border-slate-300 text-[11px] rounded-lg px-2 py-1.5 focus:outline-none focus:border-brand-500 min-w-[100px] text-slate-600">
+                        <option value="">ทุกอำเภอ</option>
+                    </select>
+                    <select id="filterSubdistrict" onchange="filterData()" class="bg-slate-50 border border-slate-300 text-[11px] rounded-lg px-2 py-1.5 focus:outline-none focus:border-brand-500 min-w-[100px] text-slate-600">
+                        <option value="">ทุกตำบล</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- List Content -->
+            <div id="searchResults" class="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-2 relative">
+                <div class="flex items-center justify-center h-full text-slate-400">
+                    <div class="text-center">
+                        <i class="fa-solid fa-spinner fa-spin text-3xl mb-3"></i>
+                        <p class="text-sm">กำลังโหลดฐานข้อมูล...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        // TODO: นำ Web App URL จาก Google Apps Script (ที่ Deploy ใหม่ล่าสุด) มาใส่ตรงนี้
+        const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbz9DkplRFjqkcalJl6_7GKiEwxwvAmwShiuLNreUpUgXW6RhGGPJM_t9sFlCP_2g60s/exec';
+        
+        let currentMode = 'new';
+        let cachedEntities = []; 
+        let cachedTargets = {}; // เพิ่มตัวแปรเก็บเป้าหมาย
+
+        // Initialize jquery.Thailand.js สำหรับระบบ Auto Complete ที่อยู่
+        $(function () {
+            $.Thailand({
+                database: 'https://cdn.jsdelivr.net/gh/earthchie/jquery.Thailand.js/jquery.Thailand.js/database/db.json',
+                $district: $('#inputSubdistrict'), // ตำบล
+                $amphoe: $('#inputDistrict'),     // อำเภอ
+                $province: $('#inputProvince'),   // จังหวัด
+                $zipcode: $('#inputZipcode'),     // รหัสไปรษณีย์
+            });
+            
+            // โหลดข้อมูลฐานข้อมูลและตั้งค่าวันที่ทันทีเมื่อเปิดหน้าเว็บมา
+            fetchExistingData();
+            displayCurrentDate();
+        });
+
+        // ฟังก์ชันดึงวันที่ปัจจุบันมาแสดง
+        function displayCurrentDate() {
+            const d = new Date();
+            const options = { year: 'numeric', month: 'short', day: 'numeric' };
+            const dateStr = d.toLocaleDateString('th-TH', options); // แปลงเป็นภาษาไทย (เช่น 28 ส.ค. 2569)
+            document.getElementById('currentDateDisplay').innerText = dateStr;
+        }
+
+        // ----------------------------------------------------
+        // ฟังก์ชัน UI & Mobile Responsive
+        // ----------------------------------------------------
+        function switchMobileTab(tab) {
+            const form = document.getElementById('panelForm');
+            const list = document.getElementById('panelList');
+            const tForm = document.getElementById('tabForm');
+            const tList = document.getElementById('tabList');
+
+            if(tab === 'form') {
+                form.classList.remove('max-md:hidden');
+                form.classList.add('max-md:flex');
+                list.classList.add('max-md:hidden');
+                list.classList.remove('max-md:flex');
+                
+                tForm.className = "flex-1 py-2.5 text-sm font-semibold border-b-2 border-white text-white transition";
+                tList.className = "flex-1 py-2.5 text-sm font-semibold border-b-2 border-transparent text-brand-200 hover:text-white transition";
+            } else {
+                list.classList.remove('max-md:hidden');
+                list.classList.add('max-md:flex');
+                form.classList.add('max-md:hidden');
+                form.classList.remove('max-md:flex');
+                
+                tList.className = "flex-1 py-2.5 text-sm font-semibold border-b-2 border-white text-white transition";
+                tForm.className = "flex-1 py-2.5 text-sm font-semibold border-b-2 border-transparent text-brand-200 hover:text-white transition";
+            }
+        }
+
+        // ----------------------------------------------------
+        // ฟังก์ชันจัดการฐานข้อมูลและฟอร์ม
+        // ----------------------------------------------------
+        async function fetchExistingData() {
+            const resDiv = document.getElementById('searchResults');
+            try {
+                const res = await fetch(GAS_API_URL);
+                const json = await res.json();
+                if(json.status === 'success') {
+                    cachedEntities = json.data.reverse(); // เอาข้อมูลล่าสุดขึ้นก่อน
+                    cachedTargets = json.targets || {}; // ดึงข้อมูลเป้าหมายมาเก็บไว้
+                    
+                    renderMiniDashboard(); // สร้างกราฟสรุป
+                    populateProvinceOptions(); // เตรียมตัวกรองที่อยู่
+                    filterData();
+                } else {
+                    resDiv.innerHTML = '<div class="text-center text-sm text-rose-500 py-8">โหลดข้อมูลล้มเหลว</div>';
+                }
+            } catch(e) {
+                resDiv.innerHTML = '<div class="text-center text-sm text-rose-500 py-8">Error: ตรวจสอบการเชื่อมต่อ API</div>';
+            }
+        }
+
+        // ฟังก์ชันสร้างตัวกรองที่อยู่แบบ Cascading
+        function populateProvinceOptions() {
+            const provs = [...new Set(cachedEntities.map(e => e.province).filter(Boolean))].sort();
+            const sel = document.getElementById('filterProvince');
+            sel.innerHTML = '<option value="">ทุกจังหวัด</option>' + provs.map(p => `<option value="${p}">${p}</option>`).join('');
+            updateDistrictOptions();
+        }
+
+        function updateDistrictOptions() {
+            const selProv = document.getElementById('filterProvince').value;
+            let filtered = cachedEntities;
+            if (selProv) filtered = filtered.filter(e => e.province === selProv);
+            
+            const dists = [...new Set(filtered.map(e => e.district).filter(Boolean))].sort();
+            const sel = document.getElementById('filterDistrict');
+            sel.innerHTML = '<option value="">ทุกอำเภอ</option>' + dists.map(d => `<option value="${d}">${d}</option>`).join('');
+            updateSubdistrictOptions();
+        }
+
+        function updateSubdistrictOptions() {
+            const selProv = document.getElementById('filterProvince').value;
+            const selDist = document.getElementById('filterDistrict').value;
+            let filtered = cachedEntities;
+            if (selProv) filtered = filtered.filter(e => e.province === selProv);
+            if (selDist) filtered = filtered.filter(e => e.district === selDist);
+            
+            const subs = [...new Set(filtered.map(e => e.subdistrict).filter(Boolean))].sort();
+            const sel = document.getElementById('filterSubdistrict');
+            sel.innerHTML = '<option value="">ทุกตำบล</option>' + subs.map(s => `<option value="${s}">${s}</option>`).join('');
+        }
+
+        function filterData() {
+            const kw = document.getElementById('searchInput').value.toLowerCase().trim();
+            const selectedType = document.querySelector('input[name="type"]:checked').value;
+            
+            const selProv = document.getElementById('filterProvince') ? document.getElementById('filterProvince').value : '';
+            const selDist = document.getElementById('filterDistrict') ? document.getElementById('filterDistrict').value : '';
+            const selSub = document.getElementById('filterSubdistrict') ? document.getElementById('filterSubdistrict').value : '';
+            
+            const matches = cachedEntities.filter(e => {
+                const matchType = e.type === selectedType;
+                const matchKw = !kw || (
+                    e.name.toLowerCase().includes(kw) || 
+                    String(e.id).toLowerCase().includes(kw) ||
+                    (e.contactName && String(e.contactName).toLowerCase().includes(kw))
+                );
+                const matchProv = !selProv || e.province === selProv;
+                const matchDist = !selDist || e.district === selDist;
+                const matchSub = !selSub || e.subdistrict === selSub;
+
+                return matchType && matchKw && matchProv && matchDist && matchSub;
+            });
+            renderRightPanel(matches);
+        }
+
+        // ฟังก์ชันสร้าง Mini Dashboard
+        function renderMiniDashboard() {
+            const container = document.getElementById('miniDashboardContent');
+            const dashWrap = document.getElementById('miniDashboardContainer');
+
+            // 1. รวมยอดขายทั้งหมดแบ่งตามอำเภอ
+            const districtSales = {};
+            cachedEntities.forEach(e => {
+                const d = e.district;
+                if (!d) return;
+                if (!districtSales[d]) districtSales[d] = 0;
+                districtSales[d] += (parseFloat(e.sales) || 0);
+            });
+
+            // 2. ดึงชื่ออำเภอที่มีการตั้งเป้าไว้มาแสดง
+            const districtsToDisplay = Object.keys(cachedTargets).sort();
+
+            if (districtsToDisplay.length === 0) {
+                dashWrap.classList.add('hidden'); // ซ่อนถ้าไม่มีการตั้งเป้า
+                return;
+            }
+            dashWrap.classList.remove('hidden');
+
+            // ฟังก์ชันย่อตัวเลข (เช่น 1,500,000 -> 1.5M, 50,000 -> 50k)
+            const formatNum = (num) => {
+                if (num >= 1000000) return (num / 1000000).toFixed(2) + 'M';
+                if (num >= 1000) return (num / 1000).toFixed(0) + 'k';
+                return num.toString();
+            };
+
+            // 3. สร้างการ์ดทีละอำเภอ
+            const html = districtsToDisplay.map(d => {
+                const target = parseFloat(cachedTargets[d]) || 0;
+                const sales = districtSales[d] || 0;
+                const percent = target > 0 ? (sales / target) * 100 : 0;
+                
+                let barColor = 'bg-rose-500';
+                if (percent >= 100) barColor = 'bg-emerald-500';
+                else if (percent >= 50) barColor = 'bg-amber-400';
+
+                const visualPercent = Math.min(percent, 100);
+
+                return `
+                    <div class="min-w-[150px] bg-slate-50 border border-slate-200 rounded-xl p-2.5 shrink-0 transition hover:shadow-md hover:border-brand-300">
+                        <div class="flex justify-between items-center text-[11px] font-bold text-slate-700 mb-1.5">
+                            <span class="truncate pr-2">อ.${d}</span>
+                            <span class="${percent >= 100 ? 'text-emerald-600' : 'text-slate-500'} bg-white px-1.5 py-0.5 rounded shadow-sm border border-slate-100">${percent.toFixed(0)}%</span>
+                        </div>
+                        <div class="w-full bg-slate-200 rounded-full h-2 mb-2 overflow-hidden shadow-inner">
+                            <div class="${barColor} h-2 rounded-full transition-all duration-700" style="width: ${visualPercent}%"></div>
+                        </div>
+                        <div class="text-[10px] text-slate-500 flex justify-between font-medium">
+                            <span title="ยอดขาย: ${sales.toLocaleString()}">฿${formatNum(sales)}</span>
+                            <span title="เป้าหมาย: ${target.toLocaleString()} text-slate-400">/ ฿${formatNum(target)}</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            container.innerHTML = html;
+        }
+
+        function renderRightPanel(data) {
+            const resDiv = document.getElementById('searchResults');
+            if(data.length === 0) {
+                resDiv.innerHTML = '<div class="text-sm text-slate-400 p-8 text-center flex flex-col items-center"><i class="fa-solid fa-box-open text-4xl mb-3 opacity-50"></i> ไม่พบข้อมูลที่ค้นหา</div>';
+                return;
+            }
+
+            resDiv.innerHTML = data.map(e => {
+                let badgeColor = e.type === 'ค้าช่วง' ? 'bg-blue-100 text-blue-700' : (e.type === 'ผู้รับเหมา' ? 'bg-amber-100 text-amber-700' : 'bg-purple-100 text-purple-700');
+                
+                // สร้างกล่องแสดงชื่อผู้ติดต่อและเบอร์โทร
+                let contactInfo = (e.contactName && e.contactName !== 'ไม่ระบุ') 
+                    ? `<div class="text-[10px] text-slate-600 mt-1 truncate font-medium"><i class="fa-solid fa-phone-volume text-brand-500 mr-1"></i>${e.contactName}</div>` 
+                    : '';
+                
+                let subDist = e.subdistrict ? `ต.${e.subdistrict} ` : '';
+
+                return `
+                <div onclick='selectForEdit(${JSON.stringify(e).replace(/'/g, "&#39;")})' class="bg-white p-3 rounded-xl border border-slate-200 hover:border-amber-400 hover:shadow-md cursor-pointer transition flex items-center justify-between group">
+                    <div class="overflow-hidden pr-2">
+                        <div class="text-sm font-bold text-slate-800 truncate" title="${e.name}">${e.name}</div>
+                        <div class="text-[10px] text-slate-500 mt-0.5 truncate">
+                            <i class="fa-solid fa-location-dot text-slate-400 mr-1"></i>${subDist}อ.${e.district} จ.${e.province}
+                        </div>
+                        ${contactInfo}
+                    </div>
+                    <div class="flex flex-col items-end shrink-0 gap-1.5">
+                        <span class="text-[9px] font-bold px-2 py-0.5 rounded-full ${badgeColor}">${e.type}</span>
+                        <div class="text-[10px] text-slate-400 group-hover:text-amber-500 transition"><i class="fa-solid fa-pen-to-square"></i> แก้ไข</div>
+                    </div>
+                </div>
+            `}).join('');
+        }
+
+        function selectForEdit(entity) {
+            currentMode = 'edit';
+            
+            // บนมือถือ ให้เด้งกลับไปหน้าฟอร์มโดยอัตโนมัติ
+            if(window.innerWidth < 768) {
+                switchMobileTab('form');
+            }
+            
+            // เปลี่ยนหน้าตาฟอร์มให้เป็นโหมดแก้ไข (สีเหลืองอำพัน)
+            const header = document.getElementById('formHeader');
+            const title = document.getElementById('formHeaderTitle');
+            const btnSub = document.getElementById('btnSubmit');
+            const btnCancel = document.getElementById('btnCancelEdit');
+            
+            header.classList.replace('bg-slate-50', 'bg-amber-50');
+            title.classList.replace('text-brand-600', 'text-amber-600');
+            title.innerHTML = `<i class="fa-solid fa-pen-to-square text-lg"></i> <span>แก้ไขข้อมูล: ${entity.id}</span>`;
+            
+            btnSub.className = "w-full flex items-center justify-center gap-2 bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 px-4 rounded-xl shadow-lg transition";
+            btnSub.innerHTML = `<i class="fa-solid fa-cloud-arrow-up"></i> <span id="btnSubmitText">บันทึกการแก้ไข</span>`;
+            
+            btnCancel.classList.remove('hidden');
+
+            // เติมข้อมูลลงฟอร์ม
+            document.getElementById('editId').value = entity.id;
+            document.getElementById('storeName').value = entity.name;
+            document.getElementById('contactName').value = entity.contactName !== 'ไม่ระบุ' ? entity.contactName : '';
+            
+            // แยกที่อยู่ (พยายามดึงข้อมูลเก่ามาใส่ แต่เนื่องจากของเดิมถูกรวมเป็น text ยาวๆ จึงเอาไปใส่ช่องรายละเอียดก่อน)
+            document.getElementById('addressDetail').value = entity.fullAddress !== 'ไม่ระบุ' ? entity.fullAddress : '';
+            document.getElementById('inputSubdistrict').value = ''; 
+            document.getElementById('inputDistrict').value = entity.district || '';
+            document.getElementById('inputProvince').value = entity.province || '';
+            document.getElementById('inputZipcode').value = '';
+            
+            document.getElementById('lat').value = entity.lat || '';
+            document.getElementById('lng').value = entity.lng || '';
+
+            // เติม Radio button
+            const radios = document.getElementsByName('type');
+            for(let r of radios) { if(r.value === entity.type) r.checked = true; }
+            
+            // เลื่อนฟอร์มขึ้นบนสุด
+            document.getElementById('panelForm').querySelector('.overflow-y-auto').scrollTo({top: 0, behavior: 'smooth'});
+        }
+
+        function cancelEdit() {
+            currentMode = 'new';
+            
+            const header = document.getElementById('formHeader');
+            const title = document.getElementById('formHeaderTitle');
+            const btnSub = document.getElementById('btnSubmit');
+            const btnCancel = document.getElementById('btnCancelEdit');
+            
+            header.classList.replace('bg-amber-50', 'bg-slate-50');
+            title.classList.replace('text-amber-600', 'text-brand-600');
+            title.innerHTML = `<i class="fa-solid fa-file-circle-plus text-lg"></i> <span>เพิ่มข้อมูลลูกค้าใหม่</span>`;
+            
+            btnSub.className = "w-full flex items-center justify-center gap-2 bg-brand-600 hover:bg-brand-700 text-white font-bold py-3 px-4 rounded-xl shadow-lg transition";
+            btnSub.innerHTML = `<i class="fa-solid fa-cloud-arrow-up"></i> <span id="btnSubmitText">บันทึกข้อมูลใหม่</span>`;
+            
+            btnCancel.classList.add('hidden');
+            
+            document.getElementById('editId').value = '';
+            document.getElementById('addDataForm').reset();
+            filterData();
+        }
+
+        // ----------------------------------------------------
+        // ฟังก์ชัน Utility & API
+        // ----------------------------------------------------
+        function getLocation() {
+            const btn = document.getElementById('btnGps');
+            if (navigator.geolocation) {
+                btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> กำลังค้นหา...`;
+                btn.disabled = true;
+
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        document.getElementById('lat').value = position.coords.latitude;
+                        document.getElementById('lng').value = position.coords.longitude;
+                        btn.innerHTML = `<i class="fa-solid fa-check text-emerald-600"></i> ดึงสำเร็จ`;
+                        btn.classList.replace('bg-indigo-100', 'bg-emerald-100');
+                        btn.classList.replace('border-indigo-200', 'border-emerald-200');
+                        btn.disabled = false;
+                        
+                        setTimeout(() => {
+                            btn.innerHTML = `<i class="fa-solid fa-location-crosshairs"></i> ดึงใหม่`;
+                            btn.classList.replace('bg-emerald-100', 'bg-indigo-100');
+                            btn.classList.replace('border-emerald-200', 'border-indigo-200');
+                        }, 3000);
+                    },
+                    (error) => {
+                        console.error("GPS Error:", error);
+                        btn.innerHTML = `<i class="fa-solid fa-location-crosshairs"></i> พิมพ์พิกัดเอง`;
+                        btn.disabled = false;
+                        alertMsg("ไม่สามารถดึง GPS ได้ กรุณาพิมพ์ตัวเลขเอง", 'error');
+                    },
+                    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+                );
+            } else {
+                alertMsg("อุปกรณ์ไม่รองรับ GPS", 'error');
+            }
+        }
+
+        function alertMsg(msg, type = 'info') {
+            const toast = document.createElement('div');
+            let bgColor = type === 'success' ? 'bg-emerald-600' : (type === 'error' ? 'bg-rose-600' : 'bg-slate-800');
+            toast.className = `fixed top-20 left-1/2 transform -translate-x-1/2 ${bgColor} text-white px-5 py-3 rounded-xl text-sm shadow-2xl z-[9999] opacity-0 transition-all duration-300 flex items-center gap-2 max-w-[90%] w-max`;
+            toast.innerText = msg;
+            document.body.appendChild(toast);
+            
+            setTimeout(() => { toast.classList.remove('opacity-0'); toast.classList.add('translate-y-2'); }, 10);
+            setTimeout(() => {
+                toast.classList.remove('translate-y-2'); toast.classList.add('opacity-0');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        async function submitForm(event) {
+            event.preventDefault();
+            const btn = document.getElementById('btnSubmit');
+            const form = document.getElementById('addDataForm');
+
+            // รวบรวมที่อยู่จาก Auto Complete และช่องรายละเอียด
+            const detail = document.getElementById('addressDetail').value.trim();
+            const sub = document.getElementById('inputSubdistrict').value.trim();
+            const dist = document.getElementById('inputDistrict').value.trim();
+            const prov = document.getElementById('inputProvince').value.trim();
+            const zip = document.getElementById('inputZipcode').value.trim();
+            
+            let fullAddress = detail;
+            if(sub) fullAddress += ` ต.${sub}`;
+            if(dist) fullAddress += ` อ.${dist}`;
+            if(prov) fullAddress += ` จ.${prov}`;
+            if(zip) fullAddress += ` ${zip}`;
+
+            const data = {
+                mode: currentMode,
+                editId: document.getElementById('editId').value,
+                type: document.querySelector('input[name="type"]:checked').value,
+                name: document.getElementById('storeName').value.trim(),
+                subdistrict: sub,
+                district: dist,
+                province: prov,
+                zipcode: zip,
+                contactName: document.getElementById('contactName').value.trim(),
+                fullAddress: fullAddress,
+                lat: parseFloat(document.getElementById('lat').value),
+                lng: parseFloat(document.getElementById('lng').value),
+                status: 'PROSPECT' 
+            };
+
+            btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-xl"></i> <span id="btnSubmitText">กำลังบันทึก...</span>`;
+            btn.disabled = true;
+
+            try {
+                const formData = new URLSearchParams();
+                for (const key in data) formData.append(key, data[key]);
+
+                const response = await fetch(GAS_API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: formData.toString()
+                });
+
+                const result = await response.json();
+
+                if (result.status === 'success') {
+                    alertMsg(result.message, "success");
+                    cancelEdit(); // รีเซ็ตฟอร์มกลับเป็นโหมดปกติ
+                    
+                    // รีโหลดข้อมูลด้านขวาเพื่อให้เห็นข้อมูลที่เพิ่งเพิ่ม/แก้
+                    document.getElementById('searchResults').innerHTML = '<div class="text-center text-sm text-slate-400 py-8"><i class="fa-solid fa-spinner fa-spin mb-2"></i><br>กำลังรีเฟรชข้อมูล...</div>';
+                    fetchExistingData(); 
+                } else {
+                    throw new Error(result.message || 'Unknown error');
+                }
+            } catch (error) {
+                console.error("Submit Error:", error);
+                alertMsg("❌ ขัดข้อง ไม่สามารถบันทึกได้ โปรดตรวจสอบการเชื่อมต่อ", "error");
+                
+                // กรณี Error ให้ปุ่มกลับมาเป็นเหมือนเดิมตามโหมดปัจจุบัน
+                if(currentMode === 'edit') {
+                    btn.innerHTML = `<i class="fa-solid fa-cloud-arrow-up"></i> <span id="btnSubmitText">บันทึกการแก้ไข</span>`;
+                } else {
+                    btn.innerHTML = `<i class="fa-solid fa-cloud-arrow-up"></i> <span id="btnSubmitText">บันทึกข้อมูลใหม่</span>`;
+                }
+            } finally {
+                btn.disabled = false;
+            }
+        }
+    </script>
+</body>
+</html>
