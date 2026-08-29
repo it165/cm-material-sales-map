@@ -226,10 +226,10 @@
             </button>
 
             <!-- Add New Store Button -->
-            <button id="btnAddData" onclick="window.open('add_store.html', '_blank')" class="bg-brand-600 hover:bg-brand-700 text-white px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 shadow-sm transition shrink-0">
+            <a href="add_store" id="btnAddData" target="_blank" class="bg-brand-600 hover:bg-brand-700 text-white px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 shadow-sm transition shrink-0">
                 <i class="fa-solid fa-plus"></i>
                 <span class="hidden sm:inline">เพิ่มข้อมูลเป้าหมาย</span>
-            </button>
+            </a>
 
             <!-- Logout Button -->
             <button onclick="logout()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition shrink-0">
@@ -475,31 +475,18 @@
             targets: {}
         };
 
-        // สำคัญ: ปล่อยให้ API Key เป็นค่าว่างไว้ ระบบ Canvas จะดึงคีย์ที่ถูกต้องมาเติมให้เองอัตโนมัติ
-        const GEMINI_API_KEY = ""; 
-        // TODO: นำ Web App URL จาก Google Apps Script มาใส่
+        // TODO: นำ Web App URL จาก Google Apps Script มาใส่ (จำเป็นต้องใส่เพื่อให้ระบบทำงานได้)
         const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbz9DkplRFjqkcalJl6_7GKiEwxwvAmwShiuLNreUpUgXW6RhGGPJM_t9sFlCP_2g60s/exec';
 
         window.addEventListener('DOMContentLoaded', () => {
-            /* 
-            =================================================
-            [ระบบตรวจสอบสิทธิ์] - ปัจจุบันปิดการใช้งานไว้เพื่อทดสอบ 
-            =================================================
-            const userRole = localStorage.getItem('userRole');
-            if (userRole !== 'admin' && userRole !== 'manager' && userRole !== 'viewer') {
-                if (window.location.protocol !== 'blob:') {
-                    window.location.href = 'login.html'; 
-                }
-            } else {
-                AppState.currentUser = { role: userRole, name: localStorage.getItem('lineName') || 'ผู้ใช้งาน' };
-                document.getElementById('userInfoDisplay').innerText = AppState.currentUser.name;
-            }
-            */
-
             // จำลองการล็อกอินเพื่อให้ใช้งานได้ทันที
             AppState.currentUser = { role: 'admin', name: 'ผู้บริหาร (ทดสอบ)' };
             document.getElementById('userInfoDisplay').innerText = AppState.currentUser.name;
-            document.getElementById('btnAddData').classList.remove('hidden');
+            
+            const btnAdd = document.getElementById('btnAddData');
+            if (btnAdd) {
+                btnAdd.classList.remove('hidden');
+            }
 
             if (window.innerWidth < 768) {
                 const body = document.getElementById('legendBody');
@@ -528,6 +515,35 @@
                 toast.classList.add('opacity-0');
                 setTimeout(() => toast.remove(), 300);
             }, 3000);
+        }
+
+        // ==========================================
+        // ฟังก์ชันกลางสำหรับเรียกใช้ AI ผ่าน Backend (Code.gs)
+        // เพื่อซ่อน API Key อย่างสมบูรณ์แบบ
+        // ==========================================
+        async function callGeminiViaBackend(prompt, systemInstruction = null, enableSearch = false) {
+            if (GAS_API_URL === 'YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL') {
+                throw new Error('กรุณาตั้งค่า GAS_API_URL ก่อนใช้งาน AI');
+            }
+
+            const payload = {
+                action: 'ask_gemini',
+                prompt: prompt,
+                systemInstruction: systemInstruction,
+                enableSearch: enableSearch
+            };
+
+            const response = await fetch(GAS_API_URL, {
+                method: 'POST',
+                // ส่งเป็น text/plain เพื่อป้องกันปัญหา CORS Preflight ใน GAS
+                body: JSON.stringify(payload) 
+            });
+
+            const result = await response.json();
+            if (result.status !== 'success') {
+                throw new Error(result.message || 'เกิดข้อผิดพลาดจาก Backend AI');
+            }
+            return result;
         }
 
         async function loadDataFromGAS() {
@@ -808,36 +824,21 @@
             หมายเหตุ: ตัวเลข chartData ให้ประเมินจากข้อมูลแนวโน้ม (Trend) เป็นตัวเลขจำนวนเต็ม (เช่น 95, 100, 105)`;
 
             try {
-                // ใช้ gemini-3-flash-preview ตามคำแนะนำสำหรับระบบ Canvas (และรองรับ Google Search Tools)
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${GEMINI_API_KEY}`;
+                // เรียกผ่าน Backend แทนการยิงตรง
+                const result = await callGeminiViaBackend(prompt, null, true);
                 
-                const response = await fetch(apiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        contents: [{ parts: [{ text: prompt }] }],
-                        tools: [{ "google_search": {} }] // เปิดใช้การค้นหาข้อมูลจากเน็ต
-                    })
-                });
+                const rawText = result.data;
+                const candidate = result.candidate; // ได้รับ Candidate เพื่อดึง Grounding
 
-                const result = await response.json();
-                
-                if(result.error) throw new Error(result.error.message);
-                
-                const candidate = result.candidates?.[0];
-                if (!candidate) throw new Error("ไม่พบข้อมูลตอบกลับจากระบบ AI");
-
-                const rawText = candidate.content.parts[0].text;
-                
                 // ใช้ Regex ดึงเฉพาะส่วนที่เป็น JSON เท่านั้น ป้องกัน Markdown ```json ครอบมา
                 const jsonMatch = rawText.match(/\{[\s\S]*\}/);
                 if (!jsonMatch) throw new Error("รูปแบบข้อมูลจาก AI ไม่ถูกต้อง (Invalid JSON format)");
                 
                 const aiData = JSON.parse(jsonMatch[0]);
 
-                // ดึงแหล่งอ้างอิงจาก Grounding Metadata
+                // ดึงแหล่งอ้างอิงจาก Grounding Metadata (จาก Backend)
                 let sourcesHtml = '<span class="text-[10px] text-slate-500 italic">ประมวลผลจากการคาดการณ์แนวโน้ม (ไม่พบแหล่งอ้างอิงตรง)</span>';
-                const grounding = candidate.groundingMetadata?.groundingAttributions;
+                const grounding = candidate?.groundingMetadata?.groundingAttributions;
                 if (grounding && grounding.length > 0) {
                     const uniqueSources = [];
                     grounding.forEach(g => {
@@ -1292,26 +1293,15 @@
 3. หากเป็น Prospect: เสนอเทคนิคเปิดใจ/เข้าทำสำหรับ ${entity.type} พื้นที่นี้
 ตอบกระชับ ตรงประเด็น ใช้ภาษาเชิงธุรกิจ นำไปปฏิบัติได้จริง`;
 
-            try {
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${GEMINI_API_KEY}`;
-                const response = await fetch(apiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        contents: [{ parts: [{ text: prompt }] }],
-                        systemInstruction: { parts: [{ text: "คุณคือ Sales Director เชี่ยวชาญการขายวัสดุก่อสร้างในภาคเหนือ ตอบตรงประเด็น ใช้งานได้ทันที" }] }
-                    })
-                });
+            const systemInstruct = "คุณคือ Sales Director เชี่ยวชาญการขายวัสดุก่อสร้างในภาคเหนือ ตอบตรงประเด็น ใช้งานได้ทันที";
 
-                const data = await response.json();
-                if (data.candidates && data.candidates[0].content) {
-                    output.innerText = data.candidates[0].content.parts[0].text;
-                } else {
-                    throw new Error("Invalid API Response");
-                }
+            try {
+                // เรียกผ่าน Backend แทน
+                const result = await callGeminiViaBackend(prompt, systemInstruct);
+                output.innerText = result.data;
             } catch (error) {
                 console.error("AI Error: ", error);
-                output.innerText = "⚠️ ไม่สามารถเชื่อมต่อกับ AI ได้ โปรดตรวจสอบว่าระบบ Canvas ทำการจัดการ API Key ให้คุณเรียบร้อยแล้ว";
+                output.innerText = `⚠️ ไม่สามารถวิเคราะห์ได้: ${error.message}`;
             } finally {
                 btn.disabled = false;
                 btn.innerHTML = `<i class="fa-solid fa-robot"></i> <span>วิเคราะห์</span>`;
@@ -1345,21 +1335,12 @@
 3. กลยุทธ์กระตุ้นยอดขาย (Sales Tactics) 3 ข้อสำหรับผู้บริหาร`;
 
             try {
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${GEMINI_API_KEY}`;
-                const response = await fetch(apiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
-                });
-
-                const apiData = await response.json();
-                if (apiData.candidates && apiData.candidates[0].content) {
-                    output.innerText = apiData.candidates[0].content.parts[0].text;
-                } else {
-                    throw new Error("Invalid API Response");
-                }
+                // เรียกผ่าน Backend แทน
+                const result = await callGeminiViaBackend(prompt);
+                output.innerText = result.data;
             } catch (error) {
-                output.innerText = "⚠️ พบปัญหาในการสร้างแผนกลยุทธ์ โปรดลองอีกครั้ง";
+                console.error("Strategy AI Error:", error);
+                output.innerText = `⚠️ พบปัญหาในการสร้างแผนกลยุทธ์: ${error.message}`;
             } finally {
                 btn.disabled = false;
                 btn.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles"></i> <span>ประมวลผลข้อมูลสร้างกลยุทธ์</span>`;
