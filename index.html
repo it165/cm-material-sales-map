@@ -1002,16 +1002,28 @@
             AppState.infoWindow = new google.maps.InfoWindow();
         }
 
+        function getEntityStatusInfo(entity) {
+            // อ้างอิงสถานะที่ถูกคำนวณมาจาก Code.gs (CUSTOMER = มีไอดี, PROSPECT = ไม่มีไอดี/ไอดีจำลอง)
+            if (entity.status === 'CUSTOMER') {
+                if (entity.sales > 0) {
+                    return { text: 'ลูกค้า (มียอด)', class: 'text-emerald-700 bg-emerald-50 border-emerald-200', dot: '#10b981' };
+                } else {
+                    return { text: 'ลูกค้า (ไม่มียอด)', class: 'text-amber-700 bg-amber-50 border-amber-200', dot: '#eab308' };
+                }
+            } else {
+                return { text: 'Prospect', class: 'text-rose-700 bg-rose-50 border-rose-200', dot: '#f43f5e' };
+            }
+        }
+
         function getMarkerConfig(entity) {
             let bgColor = '#64748b', iconClass = 'fa-circle';
             if (entity.type === 'ค้าช่วง') { bgColor = '#3b82f6'; iconClass = 'fa-store'; }
             else if (entity.type === 'ผู้รับเหมา') { bgColor = '#f59e0b'; iconClass = 'fa-helmet-safety'; }
             else if (entity.type === 'โครงการ') { bgColor = '#a855f7'; iconClass = 'fa-building'; }
             
-            let borderColor = '#f43f5e'; // Default PROSPECT
-            if (entity.status === 'CUSTOMER') {
-                borderColor = entity.sales > 0 ? '#10b981' : '#eab308'; // Green if sales > 0, Yellow if 0
-            }
+            let info = getEntityStatusInfo(entity);
+            let borderColor = info.dot;
+            
             return { bgColor, iconClass, borderColor };
         }
 
@@ -1035,21 +1047,19 @@
                     map: AppState.mapInstance, position: { lat: entity.lat, lng: entity.lng }, content: pinElement, title: entity.name
                 });
 
-                let statusHtml = '';
-                if (entity.status === 'CUSTOMER') {
-                    if (entity.sales > 0) {
-                        statusHtml = '<span class="text-emerald-600 font-bold bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">ลูกค้าปัจจุบัน</span>';
-                    } else {
-                        statusHtml = '<span class="text-amber-600 font-bold bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">ลูกค้า (ยังไม่มียอด)</span>';
-                    }
-                } else {
-                    statusHtml = '<span class="text-rose-600 font-bold bg-rose-50 px-1.5 py-0.5 rounded border border-rose-200">Prospect</span>';
+                const info = getEntityStatusInfo(entity);
+                const statusHtml = `<span class="font-bold px-1.5 py-0.5 rounded border ${info.class}">${info.text}</span>`;
+                
+                // ตรวจสอบไอดีเพื่อนำไปแสดงบน Info Window
+                let displayIdText = '';
+                if (entity.displayId && entity.displayId !== '') {
+                    displayIdText = `[${entity.displayId}]`;
                 }
 
                 marker.addListener('click', () => {
                     AppState.infoWindow.setContent(`
                         <div class="text-xs space-y-1 p-1" style="font-family: 'Kanit', sans-serif; min-width: 220px;">
-                            <div class="font-bold text-slate-800 text-sm">${entity.name}</div>
+                            <div class="font-bold text-slate-800 text-sm">${entity.name} <span class="text-slate-400 text-xs font-normal ml-1">${displayIdText}</span></div>
                             <div class="text-slate-500 flex items-center justify-between gap-3 mt-1 mb-2"><span>อ.${entity.district} | ${entity.type}</span>${statusHtml}</div>
                             <div class="text-blue-600 font-bold text-xs pt-1 border-t border-slate-100">ยอดขาย: ฿${(entity.sales).toLocaleString()}</div>
                             <button onclick="selectEntity('${entity.id}')" class="w-full mt-2 bg-brand-600 hover:bg-brand-700 text-white font-medium text-[11px] py-1.5 rounded-lg transition">ดูรายละเอียด & วิเคราะห์ AI</button>
@@ -1138,31 +1148,22 @@
             }
 
             container.innerHTML = [...data].sort((a,b) => b.sales - a.sales).map(item => {
+                const info = getEntityStatusInfo(item);
                 const config = getMarkerConfig(item);
-                
-                let badgeHtml = '';
-                if (item.status === 'CUSTOMER') {
-                    if (item.sales > 0) {
-                        badgeHtml = '<span class="text-[9px] px-1.5 py-0.5 rounded border font-medium bg-emerald-50 text-emerald-700 border-emerald-200">ลูกค้า</span>';
-                    } else {
-                        badgeHtml = '<span class="text-[9px] px-1.5 py-0.5 rounded border font-medium bg-amber-50 text-amber-700 border-amber-200">ลูกค้า (ไม่มียอด)</span>';
-                    }
-                } else {
-                    badgeHtml = '<span class="text-[9px] px-1.5 py-0.5 rounded border font-medium bg-rose-50 text-rose-700 border-rose-200">Prospect</span>';
-                }
+                const displayIdText = (item.displayId && item.displayId !== '') ? `<span class="text-[9px] text-slate-400 ml-1">#${item.displayId}</span>` : '';
 
                 return `
                     <div onclick="selectEntity('${item.id}')" class="bg-white hover:border-brand-400 p-3 rounded-xl border border-slate-200 cursor-pointer transition flex items-center justify-between shadow-sm">
                         <div class="flex items-center gap-3">
                             <div style="background-color: ${config.bgColor};" class="w-8 h-8 rounded-full flex items-center justify-center text-white shrink-0"><i class="fa-solid ${config.iconClass} text-xs"></i></div>
                             <div>
-                                <h4 class="text-xs font-bold text-slate-800 line-clamp-1">${item.name}</h4>
+                                <h4 class="text-xs font-bold text-slate-800 line-clamp-1">${item.name}${displayIdText}</h4>
                                 <div class="text-[10px] text-slate-500 flex gap-2 mt-0.5"><span>${item.type}</span><span>|</span><span>อ.${item.district}</span></div>
                             </div>
                         </div>
                         <div class="text-right shrink-0">
                             <span class="text-xs font-bold text-blue-600 block">฿${(item.sales).toLocaleString()}</span>
-                            ${badgeHtml}
+                            <span class="text-[9px] px-1.5 py-0.5 rounded border font-medium ${info.class}">${info.text}</span>
                         </div>
                     </div>
                 `;
@@ -1179,7 +1180,8 @@
             document.getElementById('overviewContent').classList.add('hidden');
             document.getElementById('entityDetailContent').classList.remove('hidden');
 
-            document.getElementById('detailName').innerText = entity.name;
+            const displayIdText = (entity.displayId && entity.displayId !== '') ? ` #${entity.displayId}` : '';
+            document.getElementById('detailName').innerText = entity.name + displayIdText;
             document.getElementById('detailType').innerText = `ประเภทเป้าหมาย: ${entity.type}`;
             document.getElementById('detailAddressText').innerText = `อำเภอ${entity.district} จ.${entity.province}`;
             
@@ -1187,7 +1189,7 @@
             
             document.getElementById('detailContactName').innerText = entity.contactName || '-';
             document.getElementById('detailFullAddress').innerText = entity.fullAddress || '-';
-            
+
             // นำข้อมูลลงหน้าจอส่วนข้อมูลจดทะเบียนพร้อมฟอร์แมตตัวเลข (ใส่คอมม่า)
             let formattedRegP = entity.regInfoP || '-';
             if (formattedRegP !== '-') {
@@ -1203,18 +1205,9 @@
             const iconObj = getMarkerConfig(entity);
             document.getElementById('detailIcon').innerHTML = `<i class="fa-solid ${iconObj.iconClass}" style="color:${iconObj.bgColor}"></i>`;
 
-            if (entity.status === 'CUSTOMER') {
-                if (entity.sales > 0) {
-                    badge.innerText = 'ลูกค้าปัจจุบัน';
-                    badge.className = 'absolute top-3 right-3 text-[10px] font-bold px-2.5 py-0.5 rounded-full border bg-emerald-50 text-emerald-700 border-emerald-200';
-                } else {
-                    badge.innerText = 'ลูกค้า (ยังไม่มียอด)';
-                    badge.className = 'absolute top-3 right-3 text-[10px] font-bold px-2.5 py-0.5 rounded-full border bg-amber-50 text-amber-700 border-amber-200';
-                }
-            } else {
-                badge.innerText = 'Prospect';
-                badge.className = 'absolute top-3 right-3 text-[10px] font-bold px-2.5 py-0.5 rounded-full border bg-rose-50 text-rose-700 border-rose-200';
-            }
+            const info = getEntityStatusInfo(entity);
+            badge.innerText = info.text;
+            badge.className = `absolute top-3 right-3 text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${info.class}`;
 
             const ctx = document.getElementById('detailCategoryChart').getContext('2d');
             if(chartDetail) chartDetail.destroy();
