@@ -219,7 +219,7 @@
                 <option value="ALL">ทุกสถานะ</option>
                 <option value="ACTIVE">ลูกค้า (มียอด)</option>
                 <option value="INACTIVE">ลูกค้าในระบบ (ยังไม่มียอด)</option>
-                <option value="PROSPECT">เป้าหมาย (ยังไม่เป็นลูกค้า)</option>
+                <option value="PROSPECT">เป้าหมาย (Prospect)</option>
             </select>
 
             <!-- Search Input -->
@@ -643,6 +643,24 @@
             tFilter.innerHTML = '<option value="ALL">ทุกประเภทลูกค้า</option>' + AppState.filters.types.map(t => `<option value="${t}">${t}</option>`).join('');
         }
 
+        // ปรับปรุง: ประเมินสถานะโดยอิงจากข้อความ Field Status ที่มาจาก Google Sheet
+        function getEntityStatusInfo(entity) {
+            const stat = String(entity.status || '').trim().toUpperCase();
+
+            // 1. ตรวจสอบ "ลูกค้า (มียอด)"
+            if (stat === 'ACTIVE' || stat.includes('มียอด')) {
+                return { text: 'ลูกค้า (มียอด)', class: 'text-emerald-700 bg-emerald-50 border-emerald-200', dot: '#10b981', code: 'ACTIVE' };
+            } 
+            // 2. ตรวจสอบ "ลูกค้า (ไม่มียอด)" หรือ "ลูกค้าในระบบ"
+            else if (stat === 'INACTIVE' || stat === 'CUSTOMER' || stat.includes('ไม่มียอด') || stat.includes('ในระบบ')) {
+                return { text: 'ลูกค้า (ไม่มียอด)', class: 'text-amber-700 bg-amber-50 border-amber-200', dot: '#eab308', code: 'INACTIVE' };
+            } 
+            // 3. สถานะอื่นๆ ถือเป็น "Prospect"
+            else {
+                return { text: 'Prospect', class: 'text-rose-700 bg-rose-50 border-rose-200', dot: '#f43f5e', code: 'PROSPECT' };
+            }
+        }
+
         function getFilteredData() {
             const search = document.getElementById('searchInput').value.toLowerCase().trim();
             const province = document.getElementById('provinceFilter').value;
@@ -694,7 +712,7 @@
                 const matchDist = district === 'ALL' || item.district === district;
                 const matchType = type === 'ALL' || item.type === type;
                 
-                // ปรับปรุงการตรวจสอบสถานะ: ให้เช็คผ่านฟังก์ชันกลางเพื่อดึง code ค่าสถานะ
+                // ตรวจสอบสถานะตามฟังก์ชันใหม่
                 let matchStatus = false;
                 const info = getEntityStatusInfo(item);
                 
@@ -962,6 +980,9 @@
             }
         }
 
+        // ==========================================
+        // Dashboard Rendering Logic
+        // ==========================================
         function renderDashboard() {
             const data = getFilteredData();
             renderMapMarkers(data);
@@ -998,25 +1019,6 @@
             
             AppState.mapInstance = new google.maps.Map(document.getElementById('map'), mapOptions);
             AppState.infoWindow = new google.maps.InfoWindow();
-        }
-
-        // ปรับปรุง: ประเมินสถานะโดยอิงจากข้อความ Field Status ที่กำหนดมาจากหน้าฟอร์มเท่านั้น
-        function getEntityStatusInfo(entity) {
-            // ป้องกันข้อมูลว่างและทำตัวพิมพ์ใหญ่เพื่อง่ายต่อการเปรียบเทียบคำ
-            const stat = String(entity.status || '').trim().toUpperCase();
-
-            // 1. ตรวจสอบ "ลูกค้า (มียอด)"
-            if (stat === 'ACTIVE' || stat.includes('มียอด')) {
-                return { text: 'ลูกค้า (มียอด)', class: 'text-emerald-700 bg-emerald-50 border-emerald-200', dot: '#10b981', code: 'ACTIVE' };
-            } 
-            // 2. ตรวจสอบ "ลูกค้า (ไม่มียอด)" หรือ "ลูกค้าในระบบ" (รองรับค่า CUSTOMER แบบเก่าด้วย)
-            else if (stat === 'INACTIVE' || stat === 'CUSTOMER' || stat.includes('ไม่มียอด') || stat.includes('ในระบบ')) {
-                return { text: 'ลูกค้า (ไม่มียอด)', class: 'text-amber-700 bg-amber-50 border-amber-200', dot: '#eab308', code: 'INACTIVE' };
-            } 
-            // 3. สถานะอื่นๆ ถือเป็น "Prospect"
-            else {
-                return { text: 'Prospect', class: 'text-rose-700 bg-rose-50 border-rose-200', dot: '#f43f5e', code: 'PROSPECT' };
-            }
         }
 
         function getMarkerConfig(entity) {
@@ -1291,11 +1293,10 @@
         }
 
         let chartStatus, chartType;
-        
-        // ปรับปรุงการคำนวณจำนวนลูกค้าโดยใช้ข้อมูล Status จากระบบ
         function updateKPIs(data) {
             const total = data.length;
             
+            // ใช้ getEntityStatusInfo แทนการเช็ค sales ตรงๆ
             const activeCustomers = data.filter(d => getEntityStatusInfo(d).code === 'ACTIVE').length;
             const inactiveCustomers = data.filter(d => getEntityStatusInfo(d).code === 'INACTIVE').length;
             const prospects = data.filter(d => getEntityStatusInfo(d).code === 'PROSPECT').length;
@@ -1309,7 +1310,6 @@
             });
 
             document.getElementById('kpiTotal').innerText = total;
-            // รวมจำนวนลูกค้าที่มีในระบบทั้งหมด (ทั้งมียอดและยังไม่มียอด)
             document.getElementById('kpiCustomer').innerText = activeCustomers + inactiveCustomers;
             document.getElementById('kpiProspect').innerText = prospects;
             document.getElementById('kpiRevenue').innerText = `฿${totalRev.toLocaleString()}`;
@@ -1325,8 +1325,8 @@
             }
         }
 
-        // ปรับปรุงกราฟสถานะลูกค้าโดยใช้ข้อมูล Status จากระบบ
         function updateCharts(data) {
+            // ใช้ getEntityStatusInfo ในการแยกกราฟสัดส่วนลูกค้า
             const activeCustomers = data.filter(d => getEntityStatusInfo(d).code === 'ACTIVE').length;
             const inactiveCustomers = data.filter(d => getEntityStatusInfo(d).code === 'INACTIVE').length;
             const prospects = data.filter(d => getEntityStatusInfo(d).code === 'PROSPECT').length;
@@ -1372,7 +1372,6 @@
             output.classList.remove('hidden');
             output.innerHTML = `🤖 ระบบกำลังประมวลผลข้อมูลของ ${entity.name}...`;
 
-            // ส่งข้อมูลสถานะที่ชัดเจนให้ AI
             const infoText = getEntityStatusInfo(entity).text;
 
             const prompt = `วิเคราะห์ข้อมูลกลุ่มเป้าหมายวัสดุก่อสร้าง:
