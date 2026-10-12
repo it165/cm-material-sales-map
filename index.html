@@ -214,7 +214,6 @@
                 <option value="ALL">ทุกประเภทลูกค้า</option>
             </select>
             
-            <!-- ปรับปรุง: เปลี่ยน Value ให้สอดคล้องกับ Logic 3 ระดับใหม่ -->
             <select id="statusFilter" onchange="filterMap()" class="bg-slate-50 text-xs text-slate-800 px-3 py-1.5 rounded-lg border border-slate-300 focus:outline-none focus:border-brand-500 focus:bg-white transition shrink-0">
                 <option value="ALL">ทุกสถานะ</option>
                 <option value="ACTIVE">ลูกค้า (มียอด)</option>
@@ -248,7 +247,8 @@
     </header>
 
     <!-- KPI Summary Bar -->
-    <section class="bg-slate-50 border-b border-slate-200 px-4 py-2 flex sm:grid sm:grid-cols-4 lg:grid-cols-7 gap-3 text-sm z-10 overflow-x-auto custom-scrollbar shrink-0">
+    <section class="bg-slate-50 border-b border-slate-200 px-4 py-2 flex sm:grid sm:grid-cols-5 lg:grid-cols-8 gap-3 text-sm z-10 overflow-x-auto custom-scrollbar shrink-0">
+        <!-- ยอดรวม -->
         <div class="bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between min-w-[120px] sm:min-w-0 shrink-0">
             <div>
                 <span class="text-slate-500 text-[10px] block font-medium">เป้าหมายรวม (ราย)</span>
@@ -256,13 +256,26 @@
             </div>
             <div class="p-2 bg-slate-100 rounded-lg text-slate-600"><i class="fa-solid fa-users text-lg"></i></div>
         </div>
+        
+        <!-- ลูกค้า (มียอด) -->
         <div class="bg-white p-2.5 rounded-xl border border-emerald-200 shadow-sm flex items-center justify-between min-w-[140px] sm:min-w-0 shrink-0">
             <div>
-                <span class="text-slate-500 text-[10px] block font-medium">ลูกค้า (Customer)</span>
-                <span id="kpiCustomer" class="text-lg font-bold text-emerald-600">0</span>
+                <span class="text-slate-500 text-[10px] block font-medium">ลูกค้า (มียอด)</span>
+                <span id="kpiActive" class="text-lg font-bold text-emerald-600">0</span>
             </div>
             <div class="p-2 bg-emerald-50 rounded-lg text-emerald-600"><i class="fa-solid fa-circle-check text-lg"></i></div>
         </div>
+
+        <!-- ลูกค้า (ไม่มียอด) -->
+        <div class="bg-white p-2.5 rounded-xl border border-amber-200 shadow-sm flex items-center justify-between min-w-[140px] sm:min-w-0 shrink-0">
+            <div>
+                <span class="text-slate-500 text-[10px] block font-medium">ลูกค้า (ไม่มียอด)</span>
+                <span id="kpiInactive" class="text-lg font-bold text-amber-600">0</span>
+            </div>
+            <div class="p-2 bg-amber-50 rounded-lg text-amber-600"><i class="fa-solid fa-circle-pause text-lg"></i></div>
+        </div>
+
+        <!-- Prospect -->
         <div class="bg-white p-2.5 rounded-xl border border-rose-200 shadow-sm flex items-center justify-between min-w-[130px] sm:min-w-0 shrink-0">
             <div>
                 <span class="text-slate-500 text-[10px] block font-medium">เป้าหมาย (Prospect)</span>
@@ -279,7 +292,7 @@
             </div>
         </div>
 
-        <!-- NEW: การ์ดแนวโน้มตลาด (AI) -->
+        <!-- การ์ดแนวโน้มตลาด (AI) -->
         <div onclick="showMarketGrowthModal()" class="bg-gradient-to-r from-indigo-600 to-purple-600 p-2.5 rounded-xl shadow-sm flex items-center justify-between min-w-[150px] sm:min-w-0 shrink-0 cursor-pointer hover:shadow-lg transition group text-white border border-indigo-400">
             <div class="w-full">
                 <span class="text-indigo-100 text-[10px] block font-medium flex justify-between items-center">แนวโน้มตลาด (AI) <i class="fa-solid fa-sparkles text-yellow-300 group-hover:scale-125 transition duration-300"></i></span>
@@ -288,7 +301,7 @@
         </div>
         
         <!-- การ์ดยอดขาย vs เป้าหมาย -->
-        <div class="bg-white p-2.5 rounded-xl border border-amber-200 shadow-sm flex items-center justify-between col-span-2 sm:col-span-4 lg:col-span-2 min-w-[200px] sm:min-w-0 shrink-0">
+        <div class="bg-white p-2.5 rounded-xl border border-amber-200 shadow-sm flex items-center justify-between col-span-2 sm:col-span-5 lg:col-span-2 min-w-[200px] sm:min-w-0 shrink-0">
             <div class="w-full">
                 <div class="flex justify-between items-center mb-1">
                     <span class="text-slate-500 text-[10px] font-medium">ยอดขายต่อเป้าหมาย (Sales vs Target)</span>
@@ -551,10 +564,6 @@
             }, 3000);
         }
 
-        // ==========================================
-        // ฟังก์ชันกลางสำหรับเรียกใช้ AI ผ่าน Backend (Code.gs)
-        // เพื่อซ่อน API Key อย่างสมบูรณ์แบบ
-        // ==========================================
         async function callGeminiViaBackend(prompt, systemInstruction = null, enableSearch = false) {
             if (GAS_API_URL === 'YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL') {
                 throw new Error('กรุณาตั้งค่า GAS_API_URL ก่อนใช้งาน AI');
@@ -643,20 +652,15 @@
             tFilter.innerHTML = '<option value="ALL">ทุกประเภทลูกค้า</option>' + AppState.filters.types.map(t => `<option value="${t}">${t}</option>`).join('');
         }
 
-        // ปรับปรุง: ประเมินสถานะโดยอิงจากข้อความ Field Status ที่มาจาก Google Sheet
         function getEntityStatusInfo(entity) {
-            const stat = String(entity.status || '').trim().toUpperCase();
-
-            // 1. ตรวจสอบ "ลูกค้า (มียอด)"
-            if (stat === 'ACTIVE' || stat.includes('มียอด')) {
+            // ระบบใหม่: อ่านค่าจากสถานะ 3 ระดับโดยตรง
+            const statStr = String(entity.status || '').trim().toUpperCase();
+            
+            if (statStr === 'ACTIVE' || statStr.includes('มียอด')) {
                 return { text: 'ลูกค้า (มียอด)', class: 'text-emerald-700 bg-emerald-50 border-emerald-200', dot: '#10b981', code: 'ACTIVE' };
-            } 
-            // 2. ตรวจสอบ "ลูกค้า (ไม่มียอด)" หรือ "ลูกค้าในระบบ"
-            else if (stat === 'INACTIVE' || stat === 'CUSTOMER' || stat.includes('ไม่มียอด') || stat.includes('ในระบบ')) {
+            } else if (statStr === 'INACTIVE' || statStr.includes('ไม่มียอด') || statStr.includes('ในระบบ') || statStr === 'CUSTOMER') {
                 return { text: 'ลูกค้า (ไม่มียอด)', class: 'text-amber-700 bg-amber-50 border-amber-200', dot: '#eab308', code: 'INACTIVE' };
-            } 
-            // 3. สถานะอื่นๆ ถือเป็น "Prospect"
-            else {
+            } else {
                 return { text: 'Prospect', class: 'text-rose-700 bg-rose-50 border-rose-200', dot: '#f43f5e', code: 'PROSPECT' };
             }
         }
@@ -712,10 +716,10 @@
                 const matchDist = district === 'ALL' || item.district === district;
                 const matchType = type === 'ALL' || item.type === type;
                 
-                // ตรวจสอบสถานะตามฟังก์ชันใหม่
                 let matchStatus = false;
                 const info = getEntityStatusInfo(item);
                 
+                // ตรวจสอบตาม Dropdown (ALL, ACTIVE, INACTIVE, PROSPECT)
                 if (status === 'ALL') {
                     matchStatus = true;
                 } else {
@@ -731,9 +735,6 @@
             renderDashboard();
         }
 
-        // ==========================================
-        // Modal Logic
-        // ==========================================
         let chartModalTotalCategory;
         
         function showTotalSalesModal() {
@@ -845,9 +846,6 @@
             modal.classList.remove('flex');
         }
 
-        // ==========================================
-        // Market Growth Modal (AI) Logic
-        // ==========================================
         function showMarketGrowthModal() {
             const modal = document.getElementById('marketGrowthModal');
             modal.classList.remove('hidden');
@@ -980,9 +978,6 @@
             }
         }
 
-        // ==========================================
-        // Dashboard Rendering Logic
-        // ==========================================
         function renderDashboard() {
             const data = getFilteredData();
             renderMapMarkers(data);
@@ -1295,13 +1290,11 @@
         let chartStatus, chartType;
         function updateKPIs(data) {
             const total = data.length;
-            
-            // ใช้ getEntityStatusInfo แทนการเช็ค sales ตรงๆ
             const activeCustomers = data.filter(d => getEntityStatusInfo(d).code === 'ACTIVE').length;
             const inactiveCustomers = data.filter(d => getEntityStatusInfo(d).code === 'INACTIVE').length;
             const prospects = data.filter(d => getEntityStatusInfo(d).code === 'PROSPECT').length;
             
-            const totalRev = data.reduce((sum, d) => sum + d.sales, 0);
+            const totalRev = data.reduce((sum, d) => sum + (parseFloat(d.sales) || 0), 0);
             
             let totalTarget = 0;
             const activeDistricts = new Set(data.map(d => d.district));
@@ -1310,8 +1303,16 @@
             });
 
             document.getElementById('kpiTotal').innerText = total;
-            document.getElementById('kpiCustomer').innerText = activeCustomers + inactiveCustomers;
-            document.getElementById('kpiProspect').innerText = prospects;
+            
+            const elActive = document.getElementById('kpiActive');
+            if(elActive) elActive.innerText = activeCustomers;
+            
+            const elInactive = document.getElementById('kpiInactive');
+            if(elInactive) elInactive.innerText = inactiveCustomers;
+            
+            const elProspect = document.getElementById('kpiProspect');
+            if(elProspect) elProspect.innerText = prospects;
+
             document.getElementById('kpiRevenue').innerText = `฿${totalRev.toLocaleString()}`;
 
             if (totalTarget > 0) {
@@ -1326,7 +1327,6 @@
         }
 
         function updateCharts(data) {
-            // ใช้ getEntityStatusInfo ในการแยกกราฟสัดส่วนลูกค้า
             const activeCustomers = data.filter(d => getEntityStatusInfo(d).code === 'ACTIVE').length;
             const inactiveCustomers = data.filter(d => getEntityStatusInfo(d).code === 'INACTIVE').length;
             const prospects = data.filter(d => getEntityStatusInfo(d).code === 'PROSPECT').length;
@@ -1345,7 +1345,7 @@
             const salesByType = {};
             data.forEach(d => { 
                 if(!salesByType[d.type]) salesByType[d.type] = 0;
-                salesByType[d.type] += d.sales; 
+                salesByType[d.type] += (parseFloat(d.sales) || 0); 
             });
 
             const ctx2 = document.getElementById('overallTypeChart').getContext('2d');
@@ -1418,7 +1418,7 @@
             output.classList.remove('hidden');
             output.innerText = "🤖 ระบบกำลังรวบรวม Data ยอดขายและพื้นที่ ส่งให้ AI ประมวลผลภาพรวม...";
 
-            const totalSales = data.reduce((sum, d) => sum + d.sales, 0);
+            const totalSales = data.reduce((sum, d) => sum + (parseFloat(d.sales) || 0), 0);
             
             const prompt = `วางแผนกลยุทธ์การขายวัสดุก่อสร้างระดับภูมิภาค ภาพรวมข้อมูลที่ฟิลเตอร์มา:
 - จำนวนเป้าหมายในพื้นที่: ${data.length} แห่ง (ประกอบด้วยประเภทต่างๆ)
